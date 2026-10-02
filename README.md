@@ -2,8 +2,8 @@
 
 대학생이 친구들과 예산을 걸고, 각자 남은 돈을 한 화면에서 같이 보는 웹서비스.
 
-- 배포 주소: (S0 배포 후 채운다)
-- 데모 방: `/r/demo`
+- 배포 주소: https://span-team.onrender.com (무료 서버라 한동안 안 쓰면 잠든다. 첫 접속이 30초~1분 걸릴 수 있다)
+- 데모 방: https://span-team.onrender.com/r/demo
 
 ## 문서
 
