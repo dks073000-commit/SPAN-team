@@ -82,6 +82,12 @@ uvicorn app.main:app --reload
 - 남은 예산 = `budget − 쓴 돈`
 - 사용률 = `쓴 돈 ÷ budget`, 순위 = 사용률이 낮은 순
 
+## 시간대
+
+- "오늘", 마감, 미제출, 기간 판정은 모두 한국 시간(KST) 기준이다.
+- 서버(`TZ=Asia/Seoul`, `render.yaml`)와 DB 연결(`app/db.py`가 `set timezone`)이 이미 KST로 맞춰져 있다. 파이썬은 `date.today()`, SQL은 `current_date`를 그대로 쓰면 된다.
+- 화면 JS에서 `new Date().toISOString()`으로 날짜를 만들지 않는다 (UTC로 바뀌어 오전 9시 전에는 하루 전 날짜가 된다). 오늘 날짜가 필요하면 서버에서 받거나 로컬 시간으로 만든다.
+
 ## 작업 방식
 
 - 시작 전에 `git pull` 하고 자기 브랜치인지 확인한다.
