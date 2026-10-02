@@ -1,0 +1,56 @@
+/* 공용 스타일. 세 화면이 같이 쓴다. 레인 전용 스타일은 static/<레인>/ 안에 둔다. */
+
+:root {
+  --bg: #ffffff;
+  --text: #1f2328;
+  --muted: #6b7280;
+  --line: #e5e7eb;
+  --accent: #2563eb;
+  --danger: #dc2626;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+main {
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 24px 16px;
+}
+
+h1 { font-size: 22px; margin: 0 0 16px; }
+h2 { font-size: 18px; margin: 24px 0 8px; }
+
+.muted { color: var(--muted); font-size: 14px; }
+.danger { color: var(--danger); }
+
+button, .button {
+  display: inline-block;
+  padding: 10px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 16px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+input, select {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 16px;
+}
+
+ul.list { list-style: none; padding: 0; margin: 0; }
+ul.list li { padding: 10px 0; border-bottom: 1px solid var(--line); }

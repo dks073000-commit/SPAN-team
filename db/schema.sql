@@ -1,0 +1,43 @@
+-- 버티기 테이블. 칸은 docs/BUILD_ORDER.md 의 "테이블"을 따른다.
+-- 여러 번 실행해도 안전하다 (이미 있으면 건너뛴다).
+
+create table if not exists rooms (
+    code             text primary key,                 -- 링크에 들어가는 방 코드 (/r/{code})
+    name             text not null,
+    start_date       date not null,
+    end_date         date not null,
+    upload_cycle     integer not null default 7,       -- 업로드 주기(일). 기본 주 1회
+    deadline_weekday smallint not null default 6,      -- 마감 요일. 0=월 ... 6=일 (파이썬 weekday())
+    created_at       timestamptz not null default now(),
+    check (end_date >= start_date),
+    check (upload_cycle > 0),
+    check (deadline_weekday between 0 and 6)
+);
+
+create table if not exists members (
+    id         bigint generated always as identity primary key,
+    room_code  text not null references rooms(code) on delete cascade,
+    nickname   text not null,
+    budget     integer not null check (budget > 0),    -- 원 단위
+    created_at timestamptz not null default now()
+);
+
+create index if not exists members_room_code_idx on members(room_code);
+
+create table if not exists expenses (
+    id         bigint generated always as identity primary key,
+    member_id  bigint not null references members(id) on delete cascade,
+    spent_on   date not null,
+    merchant   text not null,
+    amount     integer not null check (amount > 0),    -- 결제한 전체 금액(원). 내 몫 = amount / people
+    people     smallint not null default 1 check (people >= 1),
+    excluded   boolean not null default false,
+    source     text not null check (source in ('virtual', 'manual', 'file')),
+    ref        text check (ref <> ''),                 -- 가상 거래의 고유 번호. 직접 입력은 null
+    category   text,                                   -- 비워 둔다 (10/8 이후)
+    created_at timestamptz not null default now(),
+    -- 같은 멤버가 같은 ref 를 두 번 저장하지 못한다. ref 가 null 이면 여러 건 가능하다.
+    unique (member_id, ref)
+);
+
+create index if not exists expenses_member_id_idx on expenses(member_id);

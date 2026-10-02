@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>버티기 · 방</title>
+  <link rel="stylesheet" href="/static/common.css">
+</head>
+<body>
+<main>
+  <h1 id="title">방</h1>
+  <p class="muted">방 홈. 방 레인(안정훈)이 만들 화면입니다. 지금은 DB에서 읽은 멤버만 보여 줍니다.</p>
+  <p id="period" class="muted"></p>
+  <ul id="members" class="list"></ul>
+  <p>
+    <a id="add" class="button" href="#">지출 올리기</a>
+    <a id="board" class="button" href="#">보드</a>
+  </p>
+</main>
+<script>
+  const code = location.pathname.split("/")[2];
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;"}[c]));
+  document.getElementById("add").href = `/r/${code}/add`;
+  document.getElementById("board").href = `/r/${code}/board`;
+
+  fetch(`/api/rooms/${code}`)
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(room => {
+      document.getElementById("title").textContent = room.name;
+      document.getElementById("period").textContent = `${room.start_date} ~ ${room.end_date}`;
+      document.getElementById("members").innerHTML = room.members
+        .map(m => `<li>${esc(m.nickname)} · 예산 ${m.budget.toLocaleString()}원</li>`).join("");
+    })
+    .catch(status => {
+      document.getElementById("members").innerHTML =
+        `<li class="danger">${status === 404 ? "없는 방입니다." : "불러오지 못했습니다."}</li>`;
+    });
+</script>
+</body>
+</html>
