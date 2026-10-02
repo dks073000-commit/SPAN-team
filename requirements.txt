@@ -1,0 +1,16 @@
+# 서버
+fastapi==0.142.2
+uvicorn[standard]==0.54.0
+
+# DB (외부 Postgres)
+psycopg[binary]==3.3.6
+python-dotenv==1.2.4
+
+# 파일 업로드를 만들 경우 (업로드 처리, 엑셀 .xlsx / .xls 읽기)
+python-multipart==0.0.32
+openpyxl==3.1.5
+xlrd==2.0.2
+
+# 테스트
+pytest==9.1.1
+httpx==0.28.1

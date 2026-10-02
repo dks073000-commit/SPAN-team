@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>버티기 · 지출 올리기</title>
+  <link rel="stylesheet" href="/static/common.css">
+</head>
+<body>
+<main>
+  <h1>지출 올리기</h1>
+  <p class="muted">지출 레인(이태윤)이 만들 화면입니다. 지금은 이 방에 저장된 지출 건수만 보여 줍니다.</p>
+  <p id="count"></p>
+</main>
+<script>
+  const code = location.pathname.split("/")[2];
+  fetch(`/api/expenses?room_code=${encodeURIComponent(code)}`)
+    .then(r => r.ok ? r.json() : Promise.reject(r.status))
+    .then(rows => { document.getElementById("count").textContent = `저장된 지출 ${rows.length}건`; })
+    .catch(() => { document.getElementById("count").textContent = "불러오지 못했습니다."; });
+</script>
+</body>
+</html>

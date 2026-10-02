@@ -1,0 +1,15 @@
+# Render 배포 설정. Render 대시보드에서 "New > Blueprint" 로 이 레포를 고르면 읽는다.
+services:
+  - type: web
+    name: span-team
+    runtime: python
+    plan: free
+    region: singapore
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.13.7
+      - key: DATABASE_URL
+        sync: false   # 값은 레포에 넣지 않고 Render 대시보드에서 직접 입력한다

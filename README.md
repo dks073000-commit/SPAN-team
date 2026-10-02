@@ -30,11 +30,17 @@ cd SPAN-team
 python -m venv .venv
 source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
-cp .env.example .env             # 값은 팀원에게 따로 받는다. 공개된 곳에 올리지 않는다
+cp .env.example .env             # Windows: copy .env.example .env
+                                 # DATABASE_URL 값은 안정훈에게 개인 메시지로 받는다. 공개된 곳에 올리지 않는다
 uvicorn app.main:app --reload
 ```
 
 브라우저에서 `http://localhost:8000/r/demo`를 연다.
+
+- 팀이 같은 DB를 쓰므로 테이블과 데모 방은 이미 들어 있다.
+- 데모 방의 기간은 넣은 날 기준 7일이다. 기간이 지났거나 데모 데이터를 처음 상태로 되돌리려면: `python -m app.db init` (데모 방만 지우고 다시 넣는다. 다른 방은 그대로다)
+- DB 접속 확인: `http://localhost:8000/api/health/db` 에서 `"db": true`
+- 테스트: `python -m pytest`
 
 ## 매일 작업 순서
 
