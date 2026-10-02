@@ -3,6 +3,9 @@
 .env.*
 !.env.example
 
+# 실제 거래내역 파일 (테스트용으로 받은 것은 이 폴더에만 둔다)
+private/
+
 # Python
 __pycache__/
 *.py[cod]

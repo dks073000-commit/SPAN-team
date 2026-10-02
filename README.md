@@ -10,7 +10,7 @@
 | 문서 | 내용 |
 |---|---|
 | [docs/PRD.md](docs/PRD.md) | 무엇을 만드는가 |
-| [docs/BUILD_ORDER.md](docs/BUILD_ORDER.md) | 담당, 순서, 레인끼리의 약속(주소 · 테이블 · 계산식 · 환경변수) |
+| [docs/BUILD_ORDER.md](docs/BUILD_ORDER.md) | 담당, 순서, 레인끼리의 약속(주소 · 테이블 · 계산식) |
 | [docs/CLAUDE_PROMPTS.md](docs/CLAUDE_PROMPTS.md) | Claude Code에 붙여 넣는 지시문 |
 | [CLAUDE.md](CLAUDE.md) | Claude Code가 자동으로 읽는 프로젝트 규칙 |
 
@@ -19,7 +19,7 @@
 | 이름 | 레인 | 폴더 | 브랜치 |
 |---|---|---|---|
 | 안정훈 | 방 + 뼈대(공용) | `app/rooms/` `static/rooms/` + 공용 파일 | `feat/s0-ahn` → `feat/s1-room-ahn` |
-| 이태윤 | 지출 + 테스트베드 연동 | `app/expenses/` `static/expenses/` | `feat/s1-expense-lee` |
+| 이태윤 | 지출 (가상 계좌) | `app/expenses/` `static/expenses/` | `feat/s1-expense-lee` |
 | 김경은 | 보드 | `app/board/` `static/board/` | `feat/s1-board-kim` |
 
 ## 처음 시작하기
@@ -55,10 +55,10 @@ GitHub에서 PR을 만들고, 팀원 1명이 확인한 뒤 merge 한다.
 
 - 자기 레인 폴더만 고친다. 공용 파일은 단톡방에 말한 뒤 안정훈이 별도 PR로 고친다.
 - main에 직접 push 하지 않는다.
-- `.env`, `client_secret`, 토큰은 커밋하지 않는다. 이 레포는 공개 레포다.
+- `.env`와 실제 거래내역 파일은 커밋하지 않는다. 이 레포는 공개 레포다.
 - 약속을 바꿀 때는 `docs/BUILD_ORDER.md`를 먼저 고친다.
 
 ## 알아 둘 것
 
-- 거래내역은 금융결제원 오픈뱅킹 **테스트베드의 가상계좌** 데이터다. 실제 계좌가 아니다.
-- `OB_MOCK=1`이면 테스트베드 없이 예시 거래내역으로 동작한다.
+- 거래내역은 서버에 미리 넣어 둔 **가상 계좌** 데이터다. 실제 계좌가 아니다.
+- 오픈뱅킹은 핀테크 사업자와 전자금융업자만 이용할 수 있어 이번 범위에서 뺐다.

@@ -4,7 +4,7 @@
 
 작업 전에 반드시 읽는다:
 - `docs/PRD.md`: 무엇을 만드는가
-- `docs/BUILD_ORDER.md`: 누가 무엇을 만들고, 레인끼리 어떤 약속(주소 · 테이블 · 계산식 · 환경변수)을 지키는가
+- `docs/BUILD_ORDER.md`: 누가 무엇을 만들고, 레인끼리 어떤 약속(주소 · 테이블 · 계산식)을 지키는가
 
 ## 가장 먼저 할 일
 
@@ -13,7 +13,7 @@
 | 이름 | 레인 | 고칠 수 있는 곳 | 브랜치 |
 |---|---|---|---|
 | 안정훈 | 방 + 공용 | `app/rooms/` `static/rooms/` `tests/rooms/` + 공용 파일 | `feat/s0-ahn`, `feat/s1-room-ahn` |
-| 이태윤 | 지출 + 테스트베드 | `app/expenses/` `static/expenses/` `tests/expenses/` | `feat/s1-expense-lee` |
+| 이태윤 | 지출 (가상 계좌) | `app/expenses/` `static/expenses/` `tests/expenses/` | `feat/s1-expense-lee` |
 | 김경은 | 보드 | `app/board/` `static/board/` `tests/board/` | `feat/s1-board-kim` |
 
 공용 파일: `app/main.py` `app/db.py` `db/schema.sql` `db/seed.sql` `static/common.css` `requirements.txt` `render.yaml` `.gitignore` `.env.example` `README.md` `CLAUDE.md`
@@ -21,11 +21,11 @@
 ## 반드시 지키는 규칙
 
 - **다른 레인의 폴더와 공용 파일은 읽기만 한다.** 고쳐야 할 것 같으면 고치지 말고, 무엇을 왜 바꿔야 하는지 사용자에게 알려 단톡방에 올리게 한다. 공용 파일은 안정훈만 별도 PR로 고친다.
-- **약속을 마음대로 바꾸지 않는다.** 주소, 테이블 칸, 계산식, 환경변수 이름은 `docs/BUILD_ORDER.md`를 따른다. 바꿔야 하면 먼저 사용자에게 말한다.
-- **비밀값을 코드에 쓰지 않는다.** 이 레포는 공개다. `client_secret`, 토큰, DB 주소는 환경변수로만 읽는다. `.env`는 커밋하지 않는다. 화면(JavaScript)에는 어떤 비밀값도 넣지 않는다.
-- **범위 밖 기능을 만들지 않는다.** 캡처(스크린샷) 인식, 회원가입과 로그인, 실제 계좌 연동, 송금, 카테고리 분류, 광고는 만들지 않는다.
+- **약속을 마음대로 바꾸지 않는다.** 주소, 테이블 칸, 계산식은 `docs/BUILD_ORDER.md`를 따른다. 바꿔야 하면 먼저 사용자에게 말한다.
+- **비밀값을 코드에 쓰지 않는다.** 이 레포는 공개다. DB 주소는 환경변수(`DATABASE_URL`)로만 읽는다. `.env`는 커밋하지 않는다.
+- **범위 밖 기능을 만들지 않는다.** 오픈뱅킹이나 마이데이터 같은 실제 계좌 연동, 외부 금융 API 호출, 캡처(스크린샷) 인식, 회원가입과 로그인, 송금, 카테고리 분류, 광고는 만들지 않는다.
+- **가상 계좌를 실제 계좌처럼 보이게 하지 않는다.** 화면에 "가상 계좌"라고 적는다. 실제 은행 이름이나 로고를 쓰지 않는다.
 - **main에 직접 커밋하거나 push 하지 않는다.** 자기 브랜치에서 작업하고 PR로 합친다.
-- 테스트베드 API의 주소, 파라미터, 응답 형식은 추측하지 않는다. 공식 명세서나 실제 응답으로 확인한다. 확인하지 못한 것은 확인하지 못했다고 말한다.
 
 ## 기술 스택
 
@@ -33,6 +33,7 @@
 - 화면: 빌드 단계 없는 HTML + JavaScript. 프레임워크와 번들러를 쓰지 않는다
 - DB: 외부 Postgres. 테이블은 `db/schema.sql`, 데모 데이터는 `db/seed.sql`
 - 배포: Render 웹 서비스 (`render.yaml`)
+- 외부 API는 쓰지 않는다
 
 ## 구조
 
@@ -41,7 +42,7 @@ app/
   main.py        앱 시작. 레인별 라우터를 붙인다 (공용)
   db.py          DB 연결 (공용)
   rooms/         방 레인: /, /r/{code}, /api/rooms/...
-  expenses/      지출 레인: /r/{code}/add, /api/expenses/...
+  expenses/      지출 레인: /r/{code}/add, /api/expenses/... + 가상 계좌 데이터
   board/         보드 레인: /r/{code}/board, /api/board/...
 static/
   common.css     공용 스타일 (공용)
@@ -66,7 +67,13 @@ uvicorn app.main:app --reload
 ```
 
 데모 방은 `/r/demo`다. 방 레인이 끝나지 않아도 지출과 보드는 데모 방으로 개발한다.
-`OB_MOCK=1`이면 테스트베드 없이 예시 거래내역으로 동작한다.
+
+## 지출 입력
+
+- 주 입력은 가상 계좌다. "계좌 연결"을 누르면 서버가 `app/expenses/` 안의 가상 거래내역을 돌려준다. 외부 서비스를 부르지 않는다.
+- 가상 거래의 날짜는 방의 기간에 맞춰 계산한다 (BUILD_ORDER.md의 "가상 계좌 데이터").
+- 직접 입력은 예비다. 파일 업로드는 사용자가 하자고 할 때만 만든다.
+- 거래내역을 불러오는 부분은 함수 하나로 분리해 둔다. 나중에 실제 계좌 연결로 바꿀 때 그 함수만 바꾸면 되게 한다.
 
 ## 계산식
 
