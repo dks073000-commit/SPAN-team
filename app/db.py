@@ -35,6 +35,8 @@ def connect():
     """연결을 열고, 블록이 끝나면 커밋하고 닫는다. 에러가 나면 되돌린다."""
     # prepare_threshold=None: Supabase pooler(6543 포트)에서도 동작하게 한다
     with psycopg.connect(database_url(), row_factory=dict_row, prepare_threshold=None, connect_timeout=10) as conn:
+        # Supabase 는 기본 UTC 다. current_date 와 now() 가 한국 날짜로 나오게 맞춘다
+        conn.execute("set timezone to 'Asia/Seoul'")
         yield conn
 
 

@@ -2,6 +2,9 @@
 -- 날짜는 실행한 날 기준이라 오늘이 항상 기간 안에 들어간다 (시작 3일 전 ~ 4일 뒤, 7일).
 -- 보드에서 보이는 것: 절약왕(여유) · 큰손(초과) · 늦잠(미제출, 지출 없음)
 
+-- Supabase SQL Editor 에서 바로 실행해도 한국 날짜로 계산되게 한다 (기본은 UTC)
+set timezone to 'Asia/Seoul';
+
 delete from rooms where code = 'demo';   -- 멤버와 지출도 같이 지워진다
 
 insert into rooms (code, name, start_date, end_date, upload_cycle, deadline_weekday)

@@ -11,5 +11,7 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.13.7
+      - key: TZ
+        value: Asia/Seoul   # 서버는 기본 UTC 라 한국 오전 0~9시에 '오늘'이 하루 늦게 잡힌다
       - key: DATABASE_URL
         sync: false   # 값은 레포에 넣지 않고 Render 대시보드에서 직접 입력한다
