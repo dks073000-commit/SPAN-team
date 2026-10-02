@@ -5,12 +5,105 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>버티기 · 방 만들기</title>
   <link rel="stylesheet" href="/static/common.css">
+  <link rel="stylesheet" href="/static/rooms/rooms.css">
 </head>
 <body>
 <main>
-  <h1>방 만들기</h1>
-  <p class="muted">방 레인(안정훈)이 만들 화면입니다.</p>
-  <p><a class="button" href="/r/demo">데모 방 보기</a></p>
+  <h1>버티기</h1>
+  <p class="muted">친구들과 예산을 걸고, 남은 돈을 같이 봅니다.</p>
+
+  <form id="create" class="form">
+    <label>방 이름
+      <input name="name" maxlength="40" placeholder="예: 10월 둘째 주 버티기" required>
+    </label>
+    <div class="row">
+      <label>시작일 <input name="start_date" type="date" required></label>
+      <label>종료일 <input name="end_date" type="date" required></label>
+    </div>
+    <div class="row">
+      <label>업로드 주기
+        <select name="upload_cycle">
+          <option value="1">매일</option>
+          <option value="7" selected>주 1회</option>
+          <option value="14">2주 1회</option>
+        </select>
+      </label>
+      <label>마감 요일
+        <select name="deadline_weekday">
+          <option value="0">월</option><option value="1">화</option><option value="2">수</option>
+          <option value="3">목</option><option value="4">금</option><option value="5">토</option>
+          <option value="6" selected>일</option>
+        </select>
+      </label>
+    </div>
+    <p id="error" class="danger"></p>
+    <button type="submit">방 만들기</button>
+  </form>
+
+  <section id="done" hidden>
+    <h2>방이 만들어졌어요</h2>
+    <p class="muted">이 링크를 친구들에게 보내세요.</p>
+    <div class="link-box">
+      <input id="link" readonly>
+      <button id="copy" type="button">복사</button>
+    </div>
+    <p><a id="go" class="button" href="#">방으로 가기</a></p>
+  </section>
 </main>
+<script>
+  const form = document.getElementById("create");
+  const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+  const today = new Date();
+  form.start_date.value = iso(today);
+  form.end_date.value = iso(new Date(today.getTime() + 6 * 86400000));
+
+  form.addEventListener("submit", async e => {
+    e.preventDefault();
+    const error = document.getElementById("error");
+    error.textContent = "";
+    if (form.end_date.value < form.start_date.value) {
+      error.textContent = "종료일이 시작일보다 빠릅니다.";
+      return;
+    }
+    const body = {
+      name: form.name.value,
+      start_date: form.start_date.value,
+      end_date: form.end_date.value,
+      upload_cycle: Number(form.upload_cycle.value),
+      deadline_weekday: Number(form.deadline_weekday.value),
+    };
+    const button = form.querySelector("button");
+    button.disabled = true;
+    try {
+      const res = await fetch("/api/rooms", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(body),
+      });
+      if (!res.ok) throw new Error();
+      const room = await res.json();
+      document.getElementById("link").value = location.origin + room.path;
+      document.getElementById("go").href = room.path;
+      form.hidden = true;
+      document.getElementById("done").hidden = false;
+    } catch {
+      error.textContent = "방을 만들지 못했습니다. 입력을 확인하고 다시 시도해 주세요.";
+    } finally {
+      button.disabled = false;
+    }
+  });
+
+  document.getElementById("copy").addEventListener("click", async e => {
+    const link = document.getElementById("link");
+    try {
+      await navigator.clipboard.writeText(link.value);
+    } catch {
+      link.select();
+      document.execCommand("copy");
+    }
+    e.target.textContent = "복사됨";
+    setTimeout(() => { e.target.textContent = "복사"; }, 1500);
+  });
+</script>
 </body>
 </html>
