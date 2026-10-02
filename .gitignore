@@ -1,0 +1,26 @@
+# 비밀값 (공개 레포이므로 절대 커밋하지 않는다)
+.env
+.env.*
+!.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
+
+# 로컬 DB와 임시 파일
+*.db
+*.sqlite3
+*.log
+
+# 편집기와 OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Claude Code 개인 설정
+.claude/settings.local.json
