@@ -13,6 +13,8 @@ from datetime import date, datetime, timedelta
 START_DATE = date.fromisoformat(os.environ.get("MOCKBANK_START_DATE", "2026-10-02"))
 
 BANK_NAME = "버티기 가상은행"
+PRODUCT_NAME = "버티기 가상통장"  # 세 계좌 모두 수시입출금 통장
+ACCOUNT_ISSUE_DATE = date(2026, 3, 2)
 
 # (번호, 며칠째, 시간 HH:MM, 통장 표시, 금액, 입출금, 거래구분)
 ACCOUNTS = {

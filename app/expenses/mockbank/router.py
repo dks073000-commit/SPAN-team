@@ -1,7 +1,8 @@
-"""가짜 은행: 금융결제원 오픈뱅킹 "거래내역조회" 명세 모양으로 가상 계좌의 거래를 돌려준다.
+"""가짜 은행: 금융결제원 오픈뱅킹 명세 모양으로 가상 계좌의 거래내역과 잔액을 돌려준다.
 
-명세 주소  GET /v2.0/account/transaction_list/fin_num
-여기 주소  GET /api/expenses/mockbank/v2.0/account/transaction_list/fin_num
+명세 주소                                   여기 주소 (앞에 /api/expenses/mockbank)
+GET /v2.0/account/transaction_list/fin_num   거래내역조회
+GET /v2.0/account/balance/fin_num            잔액조회 (우리 앱 화면에는 쓰지 않는다. 명세를 맞춰 둔 것)
 
 명세와 다른 점 (시연용이라 일부러 단순하게 한 것):
 - 사용자 인증과 토큰을 쓰지 않는다. Authorization 헤더는 없어도, 아무 값이어도 통과한다.
@@ -48,6 +49,27 @@ def _error(now: datetime, bank_tran_id: str, code: str, message: str) -> dict:
     return _base(now, bank_tran_id) | {"rsp_code": code, "rsp_message": message}
 
 
+def _check_common(bank_tran_id: str, fintech_use_num: str, tran_dtime: str) -> tuple[str, str] | None:
+    """두 API 가 같이 쓰는 요청 확인. 문제가 있으면 (응답코드, 메시지)."""
+    if not re.fullmatch(r"[A-Za-z0-9]{20}", bank_tran_id):
+        return "M0001", "bank_tran_id 는 영문·숫자 20자리여야 합니다"
+    if fintech_use_num not in data.ACCOUNTS:
+        return "M0002", "등록되지 않은 핀테크이용번호입니다"
+    if not re.fullmatch(r"\d{14}", tran_dtime):
+        return "M0003", "tran_dtime 은 YYYYMMDDHHMMSS 14자리입니다"
+    return None
+
+
+def _settled(fintech_use_num: str, now: datetime) -> list[dict]:
+    """지금까지 일어난 거래만."""
+    return [r for r in data.transactions(fintech_use_num) if r["when"] <= now]
+
+
+def _balance(fintech_use_num: str, now: datetime) -> int:
+    settled = _settled(fintech_use_num, now)
+    return settled[-1]["after_balance"] if settled else data.ACCOUNTS[fintech_use_num]["opening_balance"]
+
+
 def _parse(day: str, time: str) -> datetime | None:
     try:
         return datetime.strptime(day + time, "%Y%m%d%H%M%S")
@@ -72,18 +94,14 @@ def transaction_list(
     now = now_kst()
 
     # 요청 확인. 빠진 값이 있으면 HTTP 200 + 오류 응답코드로 알려준다
-    if not re.fullmatch(r"[A-Za-z0-9]{20}", bank_tran_id):
-        return _error(now, bank_tran_id, "M0001", "bank_tran_id 는 영문·숫자 20자리여야 합니다")
-    if fintech_use_num not in data.ACCOUNTS:
-        return _error(now, bank_tran_id, "M0002", "등록되지 않은 핀테크이용번호입니다")
+    if problem := _check_common(bank_tran_id, fintech_use_num, tran_dtime):
+        return _error(now, bank_tran_id, *problem)
     if inquiry_type not in ("A", "I", "O"):
         return _error(now, bank_tran_id, "M0003", "inquiry_type 은 A, I, O 중 하나입니다")
     if inquiry_base not in ("D", "T"):
         return _error(now, bank_tran_id, "M0003", "inquiry_base 는 D, T 중 하나입니다")
     if sort_order not in ("D", "A"):
         return _error(now, bank_tran_id, "M0003", "sort_order 는 D, A 중 하나입니다")
-    if not re.fullmatch(r"\d{14}", tran_dtime):
-        return _error(now, bank_tran_id, "M0003", "tran_dtime 은 YYYYMMDDHHMMSS 14자리입니다")
 
     if inquiry_base == "T":
         start, end = _parse(from_date, from_time), _parse(to_date, to_time)
@@ -95,9 +113,8 @@ def transaction_list(
     # 조회
     rows = [
         r
-        for r in data.transactions(fintech_use_num)
-        if r["when"] <= now
-        and start <= r["when"] <= end
+        for r in _settled(fintech_use_num, now)
+        if start <= r["when"] <= end
         and (inquiry_type == "A" or r["inout"] == ("입금" if inquiry_type == "I" else "출금"))
     ]
     if sort_order == "D":
@@ -108,15 +125,11 @@ def transaction_list(
     page = rows[offset : offset + PAGE_SIZE]
     has_next = offset + PAGE_SIZE < len(rows)
 
-    settled = [r for r in data.transactions(fintech_use_num) if r["when"] <= now]
-    account = data.ACCOUNTS[fintech_use_num]
-    balance = settled[-1]["after_balance"] if settled else account["opening_balance"]
-
     return _base(now, bank_tran_id) | {
         "bank_name": data.BANK_NAME,
         "savings_bank_name": "",
         "fintech_use_num": fintech_use_num,
-        "balance_amt": str(balance),
+        "balance_amt": str(_balance(fintech_use_num, now)),
         "page_record_cnt": str(len(page)),
         "next_page_yn": "Y" if has_next else "N",
         "befor_inquiry_trace_info": str(offset + PAGE_SIZE) if has_next else "",
@@ -133,4 +146,26 @@ def transaction_list(
             }
             for r in page
         ],
+    }
+
+
+@router.get("/v2.0/account/balance/fin_num")
+def balance(bank_tran_id: str = "", fintech_use_num: str = "", tran_dtime: str = ""):
+    now = now_kst()
+    if problem := _check_common(bank_tran_id, fintech_use_num, tran_dtime):
+        return _error(now, bank_tran_id, *problem)
+
+    settled = _settled(fintech_use_num, now)
+    amount = str(_balance(fintech_use_num, now))
+    return _base(now, bank_tran_id) | {
+        "bank_name": data.BANK_NAME,
+        "savings_bank_name": "",
+        "fintech_use_num": fintech_use_num,
+        "balance_amt": amount,
+        "available_amt": amount,
+        "account_type": "1",  # 수시입출금
+        "product_name": data.PRODUCT_NAME,
+        "account_issue_date": data.ACCOUNT_ISSUE_DATE.strftime("%Y%m%d"),
+        "maturity_date": "",  # 수시입출금이라 만기 없음
+        "last_tran_date": settled[-1]["when"].strftime("%Y%m%d") if settled else "",
     }

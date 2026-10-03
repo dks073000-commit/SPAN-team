@@ -147,3 +147,44 @@ def test_bad_requests(overrides, code):
     res = ask(**overrides)
     assert res["rsp_code"] == code
     assert "res_list" not in res
+
+
+BALANCE_URL = "/api/expenses/mockbank/v2.0/account/balance/fin_num"
+
+
+def ask_balance(fintech_use_num=B, **overrides):
+    params = {
+        "bank_tran_id": "M202600001U123456789",
+        "fintech_use_num": fintech_use_num,
+        "tran_dtime": "20261008170000",
+    } | overrides
+    return client.get(BALANCE_URL, params=params).json()
+
+
+def test_balance_has_spec_fields():
+    res = ask_balance()
+    assert res["rsp_code"] == "A0000"
+    for key in [
+        "api_tran_id", "api_tran_dtm", "rsp_message", "bank_tran_id", "bank_tran_date", "bank_code_tran",
+        "bank_rsp_code", "bank_rsp_message", "bank_name", "savings_bank_name", "fintech_use_num", "balance_amt",
+        "available_amt", "account_type", "product_name", "account_issue_date", "maturity_date", "last_tran_date",
+    ]:
+        assert key in res, key
+    assert res["account_type"] == "1"
+
+
+def test_balance_matches_transaction_list():
+    assert ask_balance()["balance_amt"] == ask()["balance_amt"] == "391300"
+    assert ask_balance()["last_tran_date"] == "20261008"
+
+
+def test_balance_ignores_future(monkeypatch):
+    set_now(monkeypatch, datetime(2026, 10, 3, 12, 0))  # 0~2일째만 일어남
+    res = ask_balance()
+    assert res["balance_amt"] == "431200"  # 500,000 - 9,000 - 4,800 - 55,000
+    assert res["last_tran_date"] == "20261003"
+
+
+def test_balance_bad_request():
+    assert ask_balance(fintech_use_num="nope")["rsp_code"] == "M0002"
+    assert ask_balance(tran_dtime="2026")["rsp_code"] == "M0003"
