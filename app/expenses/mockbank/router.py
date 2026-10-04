@@ -13,7 +13,6 @@ GET /oauth/2.0/authorize                     계좌 연결 (사용자인증을 �
 """
 
 import re
-import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -184,7 +183,7 @@ def balance(bank_tran_id: str = "", fintech_use_num: str = "", tran_dtime: str =
 #
 # 실제 오픈뱅킹: 앱이 은행 인증 화면(GET /oauth/2.0/authorize)으로 보낸다 → 사용자가 본인 인증 ·
 # 계좌 선택 · 동의 → 은행이 redirect_uri 로 돌려보낸다 → 앱이 토큰을 받아 핀테크이용번호를 얻는다.
-# 가짜 은행: 인증 · 토큰을 생략하고, 동의 버튼 한 번으로 가상 계좌 A · B · C 중 하나를 연결해
+# 가짜 은행: 인증 · 토큰을 생략하고, 동의 버튼 한 번으로 가상 계좌(발표자 시나리오)를 연결해
 # redirect_uri 로 핀테크이용번호를 바로 돌려준다. 아무것도 저장하지 않는다.
 # ---------------------------------------------------------------------------
 
@@ -197,8 +196,9 @@ def _safe_redirect(redirect_uri: str) -> bool:
 
 
 def _pick_account() -> str:
-    """테스트에서 바꿔 끼울 수 있게 함수로 둔다. 무작위라 서버가 기억할 것이 없다."""
-    return secrets.choice(list(data.ACCOUNTS))
+    """연결할 계좌. 지금은 발표자 시나리오 계좌 하나뿐이라 누가 연결해도 같은 계좌가 된다 (10/5).
+    계좌가 여러 개가 되면 여기서 고르면 된다. 테스트에서 바꿔 끼울 수 있게 함수로 둔다."""
+    return next(iter(data.ACCOUNTS))
 
 
 @router.get("/oauth/2.0/authorize", include_in_schema=False)

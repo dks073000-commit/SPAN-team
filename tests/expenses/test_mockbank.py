@@ -14,7 +14,7 @@ from app.main import app
 client = TestClient(app)
 
 URL = "/api/expenses/mockbank/v2.0/account/transaction_list/fin_num"
-A, B, C, D = (f"BTG00000000000000000000{x}" for x in "ABCD")
+A = "BTG00000000000000000000A"
 PRESENTER = A  # 시연 장면(치킨 · 택시 가승인 · 중복)이 있는 계좌
 
 
@@ -67,14 +67,11 @@ def test_first_day_is_start_date_and_day_zero_is_before():
     assert (rows[1]["tran_date"], rows[1]["print_content"]) == ("20261002", "카페")  # A-02, 1일째
 
 
-def test_counts_per_account():
+def test_counts():
     def count(num, kind):
         return len(ask(num, inquiry_type=kind)["res_list"])
 
     assert (count(A, "O"), count(A, "I")) == (9, 2)
-    assert (count(B, "O"), count(B, "I")) == (8, 0)
-    assert (count(C, "O"), count(C, "I")) == (9, 1)
-    assert (count(D, "O"), count(D, "I")) == (8, 0)
 
 
 def test_withdrawals_only():
@@ -203,19 +200,18 @@ def test_connect_page_opens():
 
 
 def test_connect_returns_account_to_redirect_uri(monkeypatch):
-    monkeypatch.setattr(mockbank, "_pick_account", lambda: B)
+    monkeypatch.setattr(mockbank, "_pick_account", lambda: A)
     res = client.post(AUTH_URL, data={"redirect_uri": "/r/demo?step=join", "state": "xyz"}, follow_redirects=False)
     assert res.status_code == 303
     assert res.headers["location"] == (
-        "/r/demo?step=join&fintech_use_num=BTG00000000000000000000B"
-        "&account_alias=%EA%B0%80%EC%83%81+%EA%B3%84%EC%A2%8C+B&state=xyz"
+        "/r/demo?step=join&fintech_use_num=BTG00000000000000000000A"
+        "&account_alias=%EA%B0%80%EC%83%81+%EA%B3%84%EC%A2%8C+A&state=xyz"
     )
 
 
-def test_connect_picks_one_of_the_virtual_accounts():
-    for _ in range(10):
-        res = client.post(AUTH_URL, data={"redirect_uri": "/r/demo"}, follow_redirects=False)
-        assert any(f"fintech_use_num={num}" in res.headers["location"] for num in (A, B, C, D))
+def test_connect_gives_the_presenter_account():
+    res = client.post(AUTH_URL, data={"redirect_uri": "/r/demo"}, follow_redirects=False)
+    assert f"fintech_use_num={A}" in res.headers["location"]
 
 
 @pytest.mark.parametrize("bad", ["", "https://evil.example", "//evil.example", "/\\evil.example"])
