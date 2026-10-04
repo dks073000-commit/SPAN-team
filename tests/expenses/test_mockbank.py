@@ -15,6 +15,7 @@ client = TestClient(app)
 
 URL = "/api/expenses/mockbank/v2.0/account/transaction_list/fin_num"
 A = "BTG00000000000000000000A"
+SAVINGS = "BTG00000000000000000000S"
 PRESENTER = A  # 시연 장면(치킨 · 택시 가승인 · 중복)이 있는 계좌
 
 
@@ -193,28 +194,48 @@ def test_balance_bad_request():
 AUTH_URL = "/api/expenses/mockbank/oauth/2.0/authorize"
 
 
-def test_connect_page_opens():
+def test_connect_page_shows_consent_and_my_accounts():
     res = client.get(AUTH_URL, params={"redirect_uri": "/r/demo", "state": "xyz"})
     assert res.status_code == 200
-    assert "계좌 연결" in res.text and "시연용 가상 계좌" in res.text
+    page = res.text
+    assert "계좌 연결" in page and "시연용 가상 계좌" in page and "[필수]" in page
+    assert "버티기 입출금통장" in page and "123-****-1234" in page  # 입출금 (시연 거래)
+    assert "버티기 자유적금" in page and "123-****-5678" in page  # 적금
+    assert "이예시" not in page and "500000" not in page  # 주인 이름 · 잔액은 안 보여 줌
 
 
-def test_connect_returns_account_to_redirect_uri(monkeypatch):
-    monkeypatch.setattr(mockbank, "_pick_account", lambda: A)
-    res = client.post(AUTH_URL, data={"redirect_uri": "/r/demo?step=join", "state": "xyz"}, follow_redirects=False)
+def test_connect_returns_chosen_account_to_redirect_uri():
+    res = client.post(
+        AUTH_URL, data={"redirect_uri": "/r/demo?step=join", "state": "xyz", "fintech_use_num": A}, follow_redirects=False
+    )
     assert res.status_code == 303
     assert res.headers["location"] == (
-        "/r/demo?step=join&fintech_use_num=BTG00000000000000000000A"
-        "&account_alias=%EA%B0%80%EC%83%81+%EA%B3%84%EC%A2%8C+A&state=xyz"
+        "/r/demo?step=join&fintech_use_num=BTG00000000000000000000A&account_alias=%EB%B2%84%ED%8B%B0%EA%B8%B0+%EC%9E%85%EC%B6%9C%EA%B8%88%ED%86%B5%EC%9E%A5&state=xyz"
     )
 
 
-def test_connect_gives_the_presenter_account():
-    res = client.post(AUTH_URL, data={"redirect_uri": "/r/demo"}, follow_redirects=False)
-    assert f"fintech_use_num={A}" in res.headers["location"]
+def test_connect_savings_account():
+    res = client.post(AUTH_URL, data={"redirect_uri": "/r/demo", "fintech_use_num": SAVINGS}, follow_redirects=False)
+    assert f"fintech_use_num={SAVINGS}" in res.headers["location"]
+
+
+def test_connect_needs_a_chosen_account():
+    for bad in ["", "BTG00000000000000000000Z"]:
+        res = client.post(AUTH_URL, data={"redirect_uri": "/r/demo", "fintech_use_num": bad}, follow_redirects=False)
+        assert res.status_code == 400
+
+
+def test_savings_has_no_withdrawals():
+    assert ask(SAVINGS, inquiry_type="O")["res_list"] == []
+    (deposit,) = ask(SAVINGS, inquiry_type="I")["res_list"]
+    assert (deposit["print_content"], deposit["tran_amt"]) == ("이예시", "100000")  # A 에서 보낸 내 계좌 이체
+    bal = ask_balance(SAVINGS)
+    assert (bal["account_type"], bal["product_name"], bal["maturity_date"], bal["balance_amt"]) == (
+        "2", "버티기 자유적금", "20270302", "1300000"
+    )
 
 
 @pytest.mark.parametrize("bad", ["", "https://evil.example", "//evil.example", "/\\evil.example", "/\t/evil.example", "/\n/evil"])
 def test_connect_only_redirects_inside_site(bad):
     assert client.get(AUTH_URL, params={"redirect_uri": bad}).status_code == 400
-    assert client.post(AUTH_URL, data={"redirect_uri": bad}, follow_redirects=False).status_code == 400
+    assert client.post(AUTH_URL, data={"redirect_uri": bad, "fintech_use_num": A}, follow_redirects=False).status_code == 400

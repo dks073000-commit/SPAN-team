@@ -8,10 +8,21 @@
   <style>
     .bank { font-weight: 700; color: var(--accent); margin: 0 0 4px; }
     .note { background: #f3f4f6; border-radius: 8px; padding: 12px; font-size: 14px; color: var(--muted); }
-    ul { padding-left: 20px; }
+    .steps { display: flex; gap: 6px; list-style: none; padding: 0; margin: 0 0 16px; font-size: 13px; color: var(--muted); }
+    .steps li { flex: 1; text-align: center; padding: 6px 0; border-bottom: 3px solid var(--line); }
+    .steps li.now { color: var(--text); font-weight: 700; border-color: var(--accent); }
+    .steps li.done { border-color: var(--accent); }
+    ul.scope { padding-left: 20px; }
+    .agree-line { display: flex; gap: 8px; align-items: center; margin: 16px 0 0; }
+    .pick { display: flex; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin: 8px 0; }
+    .pick:has(input:checked) { border-color: var(--accent); background: #eff6ff; }
+    .pick input, .agree-line input { width: auto; flex: none; margin: 0; }
+    .pick span { display: flex; flex-direction: column; flex: 1; }
+    .pick small { color: var(--muted); }
     .actions { display: flex; gap: 8px; margin-top: 24px; }
     .actions button { flex: 1; padding: 12px; font-size: 16px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--text); }
-    .actions .agree { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+    .actions .primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+    .actions .primary:disabled { opacity: .4; }
   </style>
 </head>
 <body>
@@ -21,31 +32,60 @@
   <p class="note">시연용 가상 계좌입니다. 실제 은행·계좌와 연결되지 않습니다.<br>
     실제 서비스에서는 이 자리에 은행 본인 인증 화면이 뜹니다.</p>
 
-  <p><strong>버티기</strong> 앱이 아래 정보를 조회하도록 허락할까요?</p>
-  <ul>
-    <li>출금·입금 거래내역</li>
-  </ul>
-  <p class="muted">잔액과 계좌 주인 이름은 앱에 저장되지 않습니다.</p>
+  <ol class="steps"><li id="step-1" class="now">① 동의</li><li id="step-2">② 계좌 선택</li></ol>
 
   <form method="post" action="/api/expenses/mockbank/oauth/2.0/authorize">
     <input type="hidden" name="redirect_uri" id="redirect_uri">
     <input type="hidden" name="state" id="state">
-    <div class="actions">
-      <button type="button" id="cancel">취소</button>
-      <button type="submit" class="agree">동의하고 연결</button>
-    </div>
+
+    <!-- ① 동의 -->
+    <section id="consent">
+      <p><strong>버티기</strong> 앱이 아래 정보를 조회하도록 허락할까요?</p>
+      <ul class="scope">
+        <li>고른 계좌의 출금·입금 거래내역</li>
+        <li>버티기는 송금·결제를 할 수 없어요 (조회만)</li>
+        <li>잔액과 계좌 주인 이름은 앱에 저장되지 않아요</li>
+      </ul>
+      <label class="agree-line"><input type="checkbox" id="agree"> [필수] 거래내역 조회에 동의합니다</label>
+      <div class="actions">
+        <button type="button" class="cancel">취소</button>
+        <button type="button" class="primary" id="next" disabled>다음</button>
+      </div>
+    </section>
+
+    <!-- ② 내 계좌 선택 -->
+    <section id="choose" hidden>
+      <p>이 방에서 쓸 계좌를 골라 주세요. 고른 계좌의 출금 내역만 불러와요.</p>
+      <!--ACCOUNTS-->
+      <div class="actions">
+        <button type="button" class="cancel">취소</button>
+        <button type="submit" class="primary">이 계좌 연결</button>
+      </div>
+    </section>
   </form>
 </main>
 <script>
   const params = new URLSearchParams(location.search);
   const back = params.get("redirect_uri") || "/";
-  document.getElementById("redirect_uri").value = back;
-  document.getElementById("state").value = params.get("state") || "";
-  // 취소: 아무것도 연결하지 않고 들어오기 전 화면으로 그냥 돌아간다
-  document.getElementById("cancel").addEventListener("click", () => {
-    if (history.length > 1) history.back();
-    else location.href = back;
+  const $ = id => document.getElementById(id);
+  $("redirect_uri").value = back;
+  $("state").value = params.get("state") || "";
+
+  $("agree").addEventListener("change", e => { $("next").disabled = !e.target.checked; });
+  $("next").addEventListener("click", () => {
+    $("consent").hidden = true;
+    $("choose").hidden = false;
+    $("step-1").className = "done";
+    $("step-2").className = "now";
   });
+
+  // 취소: 아무것도 연결하지 않고 들어오기 전 화면으로 그냥 돌아간다
+  for (const button of document.querySelectorAll(".cancel")) {
+    button.addEventListener("click", () => {
+      if (history.length > 1) history.back();
+      else location.href = back;
+    });
+  }
 </script>
 </body>
 </html>
