@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, field_validator
 
 from app.db import connect, fetch_all, fetch_one
-from app.rooms.pin import LOCK_MINUTES, MAX_FAILS, check_pin, hash_pin
+from app.rooms.pin import check_pin, hash_pin
 
 STATIC = Path(__file__).resolve().parents[2] / "static" / "rooms"
 
@@ -136,35 +136,15 @@ def rejoin_room(code: str, member_id: int, body: RejoinIn):
     """다른 브라우저에서 다시 들어오기: 방 홈에서 내 이름을 누르고 4자리를 넣는다.
 
     맞으면 멤버를 돌려주고 브라우저가 member_id:{code} 로 저장한다 (참여와 같다).
-    5번 연속 틀리면 10분 동안 맞는 4자리도 받지 않는다 (429).
     """
-    with connect() as conn:
-        # for update: 동시에 여러 번 눌러도 틀린 횟수가 정확히 쌓이게 한다
-        m = conn.execute(
-            """
-            select id, nickname, budget, pin_hash, pin_fails, pin_locked_until > now() as locked
-            from members where room_code = %s and id = %s for update
-            """,
-            (code, member_id),
-        ).fetchone()
-        if m is None:
-            raise HTTPException(404, "이 방에 없는 멤버입니다")
-        if m["pin_hash"] is None:
-            raise HTTPException(403, "4자리를 정하지 않은 멤버라 다시 들어올 수 없습니다")
-        if m["locked"]:
-            raise HTTPException(429, f"여러 번 틀려서 잠겼어요. {LOCK_MINUTES}분 뒤에 다시 해 주세요")
-        if check_pin(body.pin, m["pin_hash"]):
-            conn.execute("update members set pin_fails = 0, pin_locked_until = null where id = %s", (m["id"],))
-            return {"id": m["id"], "nickname": m["nickname"], "budget": m["budget"]}
-        fails = m["pin_fails"] + 1
-        if fails >= MAX_FAILS:
-            conn.execute(
-                "update members set pin_fails = 0, pin_locked_until = now() + make_interval(mins => %s) where id = %s",
-                (LOCK_MINUTES, m["id"]),
-            )
-        else:
-            conn.execute("update members set pin_fails = %s where id = %s", (fails, m["id"]))
-    # 틀린 횟수는 위 블록이 끝날 때 저장된다 (블록 안에서 에러를 내면 되돌려진다)
-    if fails >= MAX_FAILS:
-        raise HTTPException(429, f"여러 번 틀려서 잠겼어요. {LOCK_MINUTES}분 뒤에 다시 해 주세요")
-    raise HTTPException(401, f"4자리가 맞지 않아요 (남은 기회 {MAX_FAILS - fails}번)")
+    m = fetch_one(
+        "select id, nickname, budget, pin_hash from members where room_code = %s and id = %s",
+        (code, member_id),
+    )
+    if m is None:
+        raise HTTPException(404, "이 방에 없는 멤버입니다")
+    if m["pin_hash"] is None:
+        raise HTTPException(403, "4자리를 정하지 않은 멤버라 다시 들어올 수 없습니다")
+    if not check_pin(body.pin, m["pin_hash"]):
+        raise HTTPException(401, "4자리가 맞지 않아요")
+    return {"id": m["id"], "nickname": m["nickname"], "budget": m["budget"]}

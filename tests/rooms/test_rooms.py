@@ -5,7 +5,7 @@ from fastapi.testclient import TestClient
 
 from app import db
 from app.main import app
-from app.rooms.pin import MAX_FAILS, check_pin, hash_pin
+from app.rooms.pin import check_pin, hash_pin
 
 client = TestClient(app)
 
@@ -115,24 +115,10 @@ def test_room_shows_has_pin_but_not_hash(room_code):
 
 
 @needs_db
-def test_wrong_pin_counts_down_then_locks(room_code):
+def test_wrong_pin(room_code):
     me = join(room_code)
-    for left in range(MAX_FAILS - 1, 0, -1):
-        res = rejoin(room_code, me["id"], "9999")
-        assert res.status_code == 401
-        assert f"남은 기회 {left}번" in res.json()["detail"]
-    assert rejoin(room_code, me["id"], "9999").status_code == 429
-    # 잠긴 동안은 맞는 4자리도 받지 않는다
-    assert rejoin(room_code, me["id"], "1234").status_code == 429
-
-
-@needs_db
-def test_right_pin_resets_fail_count(room_code):
-    me = join(room_code)
-    for _ in range(MAX_FAILS - 1):
-        rejoin(room_code, me["id"], "9999")
+    assert rejoin(room_code, me["id"], "9999").status_code == 401
     assert rejoin(room_code, me["id"], "1234").status_code == 200
-    assert rejoin(room_code, me["id"], "9999").status_code == 401   # 다시 5번 기회
 
 
 @needs_db

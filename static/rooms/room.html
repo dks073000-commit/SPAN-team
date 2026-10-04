@@ -186,7 +186,7 @@
         await load();
         return;
       }
-      // 401 (틀림, 남은 기회) · 429 (잠김) · 403 은 서버가 보낸 문장을 그대로 보여 준다
+      // 401 (틀림) · 403 은 서버가 보낸 문장을 그대로 보여 준다
       const detail = (await res.json().catch(() => ({}))).detail;
       $("rejoin-error").textContent = typeof detail === "string" ? detail : "숫자 4자리를 확인해 주세요.";
       form.pin.value = "";
