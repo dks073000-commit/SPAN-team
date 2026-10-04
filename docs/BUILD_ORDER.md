@@ -72,6 +72,8 @@ API는 레인 이름으로 시작한다: `/api/rooms/...` `/api/expenses/...` `/
 | `GET /api/expenses/mockbank/v2.0/account/balance/fin_num` | 잔액조회 (화면에는 쓰지 않음) | |
 | `POST /api/expenses` 🟡 | 확인 화면에서 고른 항목을 저장한다 | 지출 레인 |
 | 마감 자동 반영 🟡 (이름은 이태윤이 정한다) | 아직 안 불러온 멤버의 내역을 채운다 | 보드 레인 (결과 카드 열기 전) |
+| `POST /api/rooms/{code}/members` | 참여. 닉네임 · 예산 · 숫자 4자리(`pin`)를 받는다 | 방 레인 (방 홈) |
+| `POST /api/rooms/{code}/members/{id}/rejoin` | 다시 들어오기. `{ "pin": "1234" }` → 맞으면 멤버(`id`)를 돌려준다. 틀리면 401, 5번 틀리면 10분 잠금 429 | 방 레인 (방 홈에서 이름 누르기) |
 | `POST /api/rooms/{code}/members/{id}/give-up` 🟡 | 항복. `gave_up_at`을 기록한다 | 지출 레인 (본인 페이지의 항복 버튼) |
 
 ### 테이블
@@ -79,7 +81,7 @@ API는 레인 이름으로 시작한다: `/api/rooms/...` `/api/expenses/...` `/
 | 테이블 | 칸 | 쓰는 레인 |
 |---|---|---|
 | `rooms` | code, name, start_date, end_date, upload_cycle, deadline_weekday | 방 |
-| `members` | id, room_code, nickname, budget, fintech_use_num, confirmed_at, gave_up_at | 방 (`confirmed_at`은 지출 레인이 쓴다) |
+| `members` | id, room_code, nickname, budget, fintech_use_num, confirmed_at, gave_up_at, pin_hash, pin_fails, pin_locked_until | 방 (`confirmed_at`은 지출 레인이 쓴다) |
 | `expenses` | id, member_id, spent_on, merchant, amount, people, excluded, source, ref, category | 지출 |
 
 - 보드 레인은 세 테이블을 읽기만 한다.
@@ -89,6 +91,8 @@ API는 레인 이름으로 시작한다: `/api/rooms/...` `/api/expenses/...` `/
 - `ref` 🟡 는 가상 거래의 고유 번호다. 같은 멤버가 같은 `ref`를 두 번 저장하지 못하게 해서 중복 저장을 막는다. 직접 입력은 비워 둔다.
 - `category`는 비워 둔다. 카테고리화는 10/8 이후다.
 - 로그인이 없으므로 "나"는 브라우저에 저장한 멤버 id로 구분한다. 저장 이름은 `member_id:{code}`다.
+- `pin_hash` · `pin_fails` · `pin_locked_until` (10/4): 다른 브라우저(카톡 ↔ 크롬)에서 링크를 열면 저장값이 없어서, 방 홈에서 내 이름을 누르고 참여 때 정한 숫자 4자리를 넣어 다시 들어온다. 4자리는 해시로만 저장하고(`app/rooms/pin.py`) 방 레인만 읽는다. 데모 방 멤버는 `pin_hash`가 비어 있어 다시 들어오기를 할 수 없다.
+- 이 4자리는 "내 방으로 돌아오기"만 해결한다. 지출 API가 아직 member_id만 보고 상세 내역을 주므로, 남이 내 상세 내역을 보는 것까지 막으려면 지출 API가 확인할 값이 따로 필요하다 (발표 뒤).
 
 ### 가상 계좌 데이터
 
