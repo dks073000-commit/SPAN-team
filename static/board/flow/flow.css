@@ -2,6 +2,8 @@
    원칙: 한 화면에 가장 큰 글자 하나, 기본 버튼 하나. 설명 문장은 두지 않는다.
    팀원이 자기 레인으로 옮길 때는 이 파일의 해당 부분만 같이 가져가면 된다. */
 
+:root { --brand-shield: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 68'%3E%3Cpath d='M6 9 L9 4 L12 9 L15 4 L18 9 L21 4 L24 9 L27 4 L30 9 L33 4 L36 9 L39 4 L42 9 L45 4 L48 9 L51 4 L54 9 V31 C54 46 44 57 30 64 C16 57 6 46 6 31 Z' fill='%23fff' stroke='%231c1c21' stroke-width='3.2' stroke-linejoin='round'/%3E%3Crect x='10' y='28' width='40' height='10' fill='%23e4ff4a'/%3E%3Cpolyline points='17,19 23.5,45 30,26 36.5,45 43,19' fill='none' stroke='%231c1c21' stroke-width='4.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cline x1='10.5' y1='29.5' x2='49.5' y2='29.5' stroke='%231c1c21' stroke-width='3.4' stroke-linecap='round'/%3E%3Cline x1='10.5' y1='36.5' x2='49.5' y2='36.5' stroke='%231c1c21' stroke-width='3.4' stroke-linecap='round'/%3E%3C/svg%3E"); }
+
 /* 시연 도구 막대: 영수증 밖, 맨 위. 실제 서비스에는 없다. 화면과 경쟁하지 않게 작고 흐리게 */
 .flowbar {
   max-width: 480px;
@@ -97,7 +99,9 @@ main > .brand::before, .paper > .brand::before { content: ""; width: 23px; heigh
 
 /* 불러온 거래: 한 줄에 이름과 금액, 아래 줄에 날짜와 조정 */
 .list-head { display: flex; justify-content: space-between; align-items: center; font-size: 13px; color: var(--ink-soft); margin: 0 0 2px; }
-.tx { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "what amt" "sub ctl"; gap: 4px 10px; align-items: center; }
+.tx { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "what amt" "sub ctl" "hint hint"; gap: 4px 10px; align-items: center; }
+.tx-hint { grid-area: hint; display: flex; }
+.tx-hint .tag { white-space: normal; line-height: 1.5; }
 .tx .what { grid-area: what; font-weight: 500; }
 .tx .amt { grid-area: amt; text-align: right; }
 .tx-sub { grid-area: sub; display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; min-width: 0; }
@@ -128,13 +132,42 @@ main > .brand::before, .paper > .brand::before { content: ""; width: 23px; heigh
 
 hr { margin: 20px -4px; }
 
-/* 은행 연결 동의: 돈 이야기를 하는 화면이라 게임 요소 없이 표 한 장으로 */
+/* 은행 연결 동의: 돈 이야기를 하는 화면이라 게임 요소 없이. 누가 무엇을 하는지 주어를 붙여 한 줄씩 */
+.link-visual { display: flex; align-items: flex-start; justify-content: center; gap: 6px; margin: 2px 0 14px; }
+.lv-end { display: grid; justify-items: center; gap: 4px; width: 64px; }
+.lv-end small { font-size: 11px; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
+.lv-ic { width: 44px; height: 44px; border-radius: 12px; border: 1.5px solid var(--ink); display: grid; place-items: center; background: var(--paper); }
+.lv-ic svg { width: 24px; height: 24px; }
+.lv-app::before { content: ""; width: 24px; height: 27px; background: var(--brand-shield) no-repeat center / contain; }
+.lv-line { flex: 1; max-width: 120px; height: 44px; display: flex; align-items: center; justify-content: center; position: relative; }
+.lv-line::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1.5px dashed var(--ink-soft); }
+.lv-tag { position: relative; display: inline-flex; align-items: center; gap: 4px; background: var(--paper); padding: 0 6px; font-size: 12px; font-weight: 700; }
+.lv-tag svg { width: 14px; height: 14px; }
+.consent-title { font-size: 24px; text-align: center; margin: 0 0 4px; }
+.consent-demo { text-align: center; margin: 0 0 16px; }
+.scope { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.scope li { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 12px; align-items: start; }
+.sc-ic { width: 36px; height: 36px; border-radius: 50%; background: var(--counter); display: grid; place-items: center; }
+.sc-ic svg { width: 19px; height: 19px; }
+.scope b { display: block; font-size: 15px; font-weight: 900; line-height: 1.35; }
+.scope li span:not(.sc-ic) { display: block; font-size: 14px; color: var(--ink-soft); line-height: 1.5; margin-top: 2px; }
+.terms { margin: 14px 0 12px; font-size: 13px; color: var(--ink-soft); }
+.terms summary { cursor: pointer; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; width: fit-content; }
+.terms dl { margin: 10px 0 0; display: grid; gap: 6px; background: #f6f6f8; border-radius: 10px; padding: 12px 14px; }
+.terms dl div { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 8px; }
+.terms dd { margin: 0; color: var(--ink); }
+.agree span { line-height: 1.4; }
+.agree b { color: var(--ink); }
+main.flow-step .step-actions button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* (예전 두 칸 표: UI 가이드 예시에서만 쓰던 것) */
 .consent { margin: 14px 0 14px; padding: 0; display: grid; }
 .consent div { display: grid; grid-template-columns: 7.2em minmax(0, 1fr); gap: 10px; padding: 9px 0; }
 .consent div + div { border-top: 1px dotted var(--rule); }
 .consent dt { font-size: 14px; color: var(--ink-soft); }
 .consent dd { margin: 0; font-weight: 500; }
-.agree { display: flex; align-items: center; gap: 10px; font-weight: 700; margin: 0 0 6px; cursor: pointer; }
+.agree { display: flex; align-items: flex-start; gap: 10px; font-weight: 500; margin: 0 0 6px; cursor: pointer; font-size: 15px; }
+.agree input { margin-top: 1px; }
 .agree input { flex: none; }
 
 /* 계좌 불러오는 중 */
@@ -151,7 +184,8 @@ hr { margin: 20px -4px; }
 .accounts { display: grid; }
 
 /* 참여 흐름(정보 입력 → 은행 연결 → 계좌 선택): 단계가 바뀌어도 영수증 길이와 버튼 자리가 그대로 */
-main.flow-step { min-height: 670px; display: flex; flex-direction: column; }
+/* 휴대폰 한 화면을 채우는 길이(위 도구 막대 몫 76px 제외). 컴퓨터에서는 780px 에서 멈춘다 */
+main.flow-step { min-height: clamp(670px, calc(100dvh - 76px), 780px); display: flex; flex-direction: column; }
 main.flow-step .step-body { flex: 1; display: flex; flex-direction: column; }
 main.flow-step .step-actions { margin-top: auto; padding-top: 18px; display: grid; gap: 10px; }
 .back { justify-self: start; align-self: flex-start; margin: -6px 0 10px; }

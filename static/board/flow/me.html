@@ -77,7 +77,7 @@
         const sub = [];
         sub.push(`<span class="when">${F.md(e.spent_on)}</span>`);
         if (e.people > 1 && !e.excluded) sub.push(`<span class="when">내 몫 <span class="n">${F.won(F.share(e.amount, e.people))}</span>원</span>`);
-        if (e.hint) sub.push(`<span class="tag">${e.hint}</span>`);
+
         let ctl;
         if (e.auto) ctl = `<span class="stamp stamp-gray">${e.auto}</span>`;
         else if (gaveUp) ctl = "";
@@ -93,6 +93,7 @@
             <span class="amt"><span class="n">${F.won(e.amount)}</span>원</span>
             <span class="tx-sub">${sub.join("")}</span>
             <span class="ctl">${ctl}</span>
+            ${e.hint ? `<span class="tx-hint"><span class="tag">${e.hint}</span></span>` : ""}
           </li>`;
       }).join("");
 
