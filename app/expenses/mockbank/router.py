@@ -3,6 +3,7 @@
 명세 주소                                   여기 주소 (앞에 /api/expenses/mockbank)
 GET /v2.0/account/transaction_list/fin_num   거래내역조회
 GET /v2.0/account/balance/fin_num            잔액조회 (우리 앱 화면에는 쓰지 않는다. 명세를 맞춰 둔 것)
+(명세에 없음)                                 GET /accounts  가짜 은행 전용 계좌 목록 (참여 폼에서 계좌를 고를 때)
 
 명세와 다른 점 (시연용이라 일부러 단순하게 한 것):
 - 사용자 인증과 토큰을 쓰지 않는다. Authorization 헤더는 없어도, 아무 값이어도 통과한다.
@@ -169,3 +170,17 @@ def balance(bank_tran_id: str = "", fintech_use_num: str = "", tran_dtime: str =
         "maturity_date": "",  # 수시입출금이라 만기 없음
         "last_tran_date": settled[-1]["when"].strftime("%Y%m%d") if settled else "",
     }
+
+
+@router.get("/accounts")
+def accounts():
+    """가짜 은행 전용 계좌 목록. 오픈뱅킹 명세에는 없는 API 다.
+
+    실제 오픈뱅킹에서는 사용자가 은행 인증 화면(OAuth 사용자인증)에서 조회를 허락할 계좌를 고르고,
+    앱은 그 계좌의 핀테크이용번호를 받는다. 참여 폼의 계좌 고르기가 그 단계를 대신한다.
+    주인 이름 · 잔액 · 거래는 내보내지 않는다.
+    """
+    return [
+        {"fintech_use_num": num, "account_alias": account["label"], "bank_name": data.BANK_NAME}
+        for num, account in data.ACCOUNTS.items()
+    ]

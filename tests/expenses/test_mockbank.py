@@ -188,3 +188,13 @@ def test_balance_ignores_future(monkeypatch):
 def test_balance_bad_request():
     assert ask_balance(fintech_use_num="nope")["rsp_code"] == "M0002"
     assert ask_balance(tran_dtime="2026")["rsp_code"] == "M0003"
+
+
+def test_account_list_for_join_form():
+    res = client.get("/api/expenses/mockbank/accounts")
+    assert res.status_code == 200
+    rows = res.json()
+    assert [r["account_alias"] for r in rows] == ["가상 계좌 A", "가상 계좌 B", "가상 계좌 C"]
+    assert [r["fintech_use_num"] for r in rows] == [A, B, C]
+    for row in rows:
+        assert set(row) == {"fintech_use_num", "account_alias", "bank_name"}  # 주인 이름 · 잔액은 안 나감
