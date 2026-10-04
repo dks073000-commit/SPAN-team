@@ -71,7 +71,7 @@ def test_counts():
     def count(num, kind):
         return len(ask(num, inquiry_type=kind)["res_list"])
 
-    assert (count(A, "O"), count(A, "I")) == (9, 2)
+    assert (count(A, "O"), count(A, "I")) == (11, 2)
 
 
 def test_withdrawals_only():
@@ -80,7 +80,7 @@ def test_withdrawals_only():
 
 
 def test_future_transactions_are_hidden(monkeypatch):
-    set_now(monkeypatch, datetime(2026, 10, 8, 17, 0))  # 발표 시각: 치킨(19:30)은 아직
+    set_now(monkeypatch, datetime(2026, 10, 8, 16, 0))  # 발표 당일 오후 4시: 치킨(16:30)은 아직
     contents = [r["print_content"] for r in ask()["res_list"]]
     assert "택시" in contents and "치킨집" not in contents
 
@@ -88,14 +88,14 @@ def test_future_transactions_are_hidden(monkeypatch):
     assert all(r["tran_date"] <= "20261007" for r in ask()["res_list"])
 
 
-def test_chicken_appears_after_payment(monkeypatch):
-    set_now(monkeypatch, datetime(2026, 10, 8, 19, 30))
+def test_chicken_is_ready_before_presentation(monkeypatch):
+    set_now(monkeypatch, datetime(2026, 10, 8, 17, 0))  # 발표 시작 시각 (10/8 17:00 ~ 19:30)
     assert ask(inquiry_type="O", sort_order="D")["res_list"][0]["print_content"] == "치킨집"
 
 
 def test_date_range_and_time_range():
     rows = ask(from_date="20261005", to_date="20261005")["res_list"]
-    assert [r["print_content"] for r in rows] == ["편의점", "편의점"]  # A-04, A-05
+    assert [r["print_content"] for r in rows] == ["편의점", "편의점"]  # A-06, A-07
 
     rows = ask(inquiry_base="T", from_date="20261007", from_time="232000", to_date="20261007", to_time="235959")["res_list"]
     assert [(r["inout_type"], r["tran_amt"]) for r in rows] == [("입금", "20000"), ("출금", "9800")]
@@ -109,8 +109,8 @@ def test_sort_order():
 
 def test_balance_follows_transactions():
     res = ask()
-    assert res["res_list"][-1]["after_balance_amt"] == "391300"
-    assert res["balance_amt"] == "391300"
+    assert res["res_list"][-1]["after_balance_amt"] == "271300"
+    assert res["balance_amt"] == "271300"
 
 
 def test_paging(monkeypatch):
@@ -119,9 +119,9 @@ def test_paging(monkeypatch):
     assert (first["page_record_cnt"], first["next_page_yn"]) == ("4", "Y")
     second = ask(befor_inquiry_trace_info=first["befor_inquiry_trace_info"])
     assert second["res_list"][0] != first["res_list"][0]
-    pages = [first, second, ask(befor_inquiry_trace_info="8")]
-    assert pages[-1]["next_page_yn"] == "N"
-    assert sum(len(p["res_list"]) for p in pages) == 11
+    pages = [first, second, ask(befor_inquiry_trace_info="8"), ask(befor_inquiry_trace_info="12")]
+    assert [p["next_page_yn"] for p in pages] == ["Y", "Y", "Y", "N"]
+    assert sum(len(p["res_list"]) for p in pages) == 13
 
 
 def test_no_token_needed():
@@ -173,7 +173,7 @@ def test_balance_has_spec_fields():
 
 
 def test_balance_matches_transaction_list():
-    assert ask_balance()["balance_amt"] == ask()["balance_amt"] == "391300"
+    assert ask_balance()["balance_amt"] == ask()["balance_amt"] == "271300"
     assert ask_balance()["last_tran_date"] == "20261008"
 
 
