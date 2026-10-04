@@ -96,6 +96,7 @@
       window.Flow.toolbar(code);   // 영수증 위 시연 막대 (참여자 시점 | 개발자 시점 + 도구)
       const bar = document.querySelector(".demo-bar");
       if (bar) document.querySelector(".counter").prepend(bar);
+      window.Flow.tabbar(code, "result");   // 아래 고정 탭 [내 기록 | 결과]
       if (!state) throw Object.assign(new Error("missing"), { kind: "missing" });
       return { data: window.Flow.board(state, wantPreview), me: window.Flow.myId(code) };
     }
@@ -175,10 +176,12 @@
         <ul class="lineup">${players.map((p) => `
           <li class="player">${token(p.member_id, p.nickname, p.member_id === me ? "is-me" : "")}<span class="pname">${esc(p.nickname)}</span></li>`).join("")}</ul>
       </section>`;
-    $("actions").innerHTML = joined
-      ? `<a class="btn" href="${myPage}">내 페이지로</a>`
+    // 시연 흐름에서 참여한 사람은 아래 고정 탭 [내 기록 | 결과] 로 오가니 버튼을 겹쳐 두지 않는다
+    const tabbed = isFlow && document.body.classList.contains("has-tabbar");
+    $("actions").innerHTML = tabbed ? ""
+      : joined ? `<a class="btn" href="${myPage}">내 페이지로</a>`
       : `<a class="btn" href="${roomPage}">이 방에 참여하기</a>`;
-    $("actions").hidden = false;
+    $("actions").hidden = tabbed;
     document.title = `${room.name} · ${dday}`;
   }
 
@@ -283,7 +286,7 @@
       </div>
       <p class="story-hint">영수증만 저장하면 배경이 투명해서 사진 위에 붙일 수 있어요</p>
       <p class="story-hint" id="save-error" hidden>저장하지 못했어요. 화면을 캡처해 주세요</p>
-      ${mine && !mine.gave_up ? `<a class="link" href="${myPage}">내 페이지로</a>` : ""}`;
+      ${mine && !mine.gave_up && !document.body.classList.contains("has-tabbar") ? `<a class="link" href="${myPage}">내 페이지로</a>` : ""}`;
     $("actions").hidden = false;
     $("save-story").addEventListener("click", (ev) => saveImage("story", room, ev.currentTarget));
     $("save-sticker").addEventListener("click", (ev) => saveImage("sticker", room, ev.currentTarget));

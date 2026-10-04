@@ -23,6 +23,7 @@
     let flash = "";
     let confirmingQuit = false;
     F.toolbar(code);
+    F.tabbar(code, "me");
 
     function render() {
       const state = F.load(code);
@@ -116,8 +117,7 @@
           </section>` : ""}
         <hr>
         <p class="links">
-          <a href="/flow/r/${enc}/board">결과 카드 · ${dday}</a>
-          <a href="/flow/r/${enc}">방 홈</a>
+          <button type="button" id="invite" class="text-btn">친구 초대 링크 복사</button>
           ${gaveUp ? "" : '<button type="button" id="quit" class="text-btn danger-text">항복하기</button>'}
         </p>`;
       document.title = `내 페이지 · ${state.room.name}`;
@@ -135,6 +135,13 @@
         flash = "조정 완료. 결과 카드에 이대로 들어가요";
         render();
         window.scrollTo(0, 0);
+      });
+      const invite = document.getElementById("invite");
+      if (invite) invite.addEventListener("click", async () => {
+        const link = `${location.origin}/flow/r/${enc}`;
+        try { await navigator.clipboard.writeText(link); invite.textContent = "링크를 복사했어요"; }
+        catch (e) { invite.textContent = link; }
+        setTimeout(() => { invite.textContent = "친구 초대 링크 복사"; }, 1800);
       });
       const quit = document.getElementById("quit");
       if (quit) quit.addEventListener("click", () => { confirmingQuit = true; render(); window.scrollTo(0, 0); });

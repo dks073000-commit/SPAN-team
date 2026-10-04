@@ -108,7 +108,7 @@ window.Flow = (function () {
         { id: 3, nickname: "카페중독", budget: 80000, account: null, confirmed_at: at(10, 7, 22, 30), gave_up_at: null },
         { id: 4, nickname: "큰손", budget: 70000, account: null, confirmed_at: null, gave_up_at: null },
         { id: 5, nickname: "포기각", budget: 50000, account: null, confirmed_at: null, gave_up_at: at(10, 4, 23) },
-      ],
+      ].map((m) => ({ ...m, pin_hash: pinHash("demo", DEMO_PIN) })),
       expenses: [sum(2, 22000, 7), sum(3, 52000, 7), sum(4, 85000, 7), sum(5, 61000, 4)],
     };
     put(roomKey("demo"), state);
@@ -124,7 +124,7 @@ window.Flow = (function () {
      ["큰손", 70000, 85000, false, false], ["포기각", 50000, 61000, false, true]].forEach(([nickname, budget, amount, confirmed, quit]) => {
       if (state.members.some((m) => m.nickname === nickname)) return;
       const id = state.next_id++;
-      state.members.push({ id, nickname, budget, account: null, confirmed_at: confirmed ? stamp + 1 : null, gave_up_at: quit ? stamp : null });
+      state.members.push({ id, nickname, budget, account: null, pin_hash: pinHash(code, DEMO_PIN), confirmed_at: confirmed ? stamp + 1 : null, gave_up_at: quit ? stamp : null });
       state.expenses.push({ member_id: id, ref: `dummy-${id}`, merchant: "시연용 합계", amount, people: 1, excluded: false, auto: null, hint: null, spent_on: day, created_at: stamp });
     });
     save(state);
@@ -145,16 +145,49 @@ window.Flow = (function () {
     return code;
   }
 
-  function join(code, { nickname, budget, account }) {
+  // 방마다 쓰는 숫자 4자리 (회원가입 아님: 연락처 · 실명을 받지 않고, 그 방 안에서만 쓴다).
+  // 시연용이라 브라우저에서 간단한 해시만 한다. 실제 서비스는 서버에서 hashlib 으로 해시해 members 에 저장한다
+  const pinHash = (code, pin) => {
+    let h = 2166136261;
+    for (const ch of `${code}:${pin}`) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
+    return h.toString(16);
+  };
+  const DEMO_PIN = "1234";   // 데모방 · 가상 참여자의 4자리 (시연 도구 시트에 적어 둔다)
+  const MAX_TRIES = 5;
+  const LOCK_MS = 30000;
+
+  function join(code, { nickname, budget, account, pin }) {
     const state = load(code);
     const id = state.next_id++;
-    state.members.push({ id, nickname, budget, account, confirmed_at: null, gave_up_at: null });
+    state.members.push({ id, nickname, budget, account, pin_hash: pinHash(code, pin), confirmed_at: null, gave_up_at: null });
     save(state);
     put(meKey(code), id);
     return id;
   }
 
   const myId = (code) => get(meKey(code));
+
+  // 다른 브라우저(카톡 → 크롬 등)에서 다시 들어올 때: 내 이름 고르기 → 4자리. 5번 틀리면 30초 잠금
+  function claim(code, memberId, pin) {
+    const state = load(code);
+    const m = member(state, memberId);
+    const key = `flow:tries:${code}:${memberId}`;
+    const t = get(key) || { n: 0, until: 0 };
+    const nowMs = Date.now();
+    if (t.until > nowMs) return { ok: false, lockedFor: Math.ceil((t.until - nowMs) / 1000) };
+    if (m && m.pin_hash === pinHash(code, pin)) {
+      drop(key);
+      put(meKey(code), memberId);
+      return { ok: true };
+    }
+    t.n += 1;
+    if (t.n >= MAX_TRIES) { put(key, { n: 0, until: nowMs + LOCK_MS }); return { ok: false, lockedFor: LOCK_MS / 1000 }; }
+    put(key, t);
+    return { ok: false, left: MAX_TRIES - t.n };
+  }
+
+  // 시연: "다른 기기에서 열었다 치고" 이 브라우저의 내 자리 기억만 지운다
+  const forgetMe = (code) => drop(meKey(code));
   const member = (state, id) => state.members.find((m) => m.id === id) || null;
 
   function reset(code) {
@@ -350,6 +383,7 @@ window.Flow = (function () {
           ${code ? row("", "결과 카드 보기", "마감 전이어도 지금 기록으로 결과를 봐요", `/flow/r/${enc}/board?preview=1`) : ""}
           ${code && code !== "demo" && !hasDummies ? row("fill", "가상 참여자 채우기", "짠돌이 · 카페중독 · 큰손 · 포기각을 이 방에 넣어요") : ""}
           ${code === "demo" ? "" : row("", "발표용 데모 방 열기", "발표자 · 짠돌이 · 카페중독 · 큰손 · 포기각이 있는 방", "/flow/r/demo")}
+          ${code && get(meKey(code)) != null ? row("forget", "다른 기기처럼 다시 들어오기", `이 브라우저의 내 자리 기억만 지워요. 데모 참여자 4자리는 ${DEMO_PIN}`) : ""}
           ${code ? row("reset", "이 방 처음부터 다시", "참여 · 은행 연결 · 불러온 기록을 지워요") : ""}
         </div>
         <button type="button" class="ds-close" data-act="close">닫기</button>
@@ -368,6 +402,7 @@ window.Flow = (function () {
       if (act === "day-real") { drop(TODAY_KEY); location.reload(); }
       if (act === "day-end") { put(TODAY_KEY, endDay); location.reload(); }
       if (act === "fill") { fillDummies(code); location.reload(); }
+      if (act === "forget") { forgetMe(code); location.href = `/flow/r/${enc}`; }
       if (act === "reset") {
         if (code === "demo" && mode === "participant") { startParticipant(); return; }
         reset(code); location.href = code === "demo" ? "/flow/r/demo" : "/flow";
@@ -381,9 +416,34 @@ window.Flow = (function () {
     return page;
   }
 
+  /* ---------- 아래 고정 탭: 참여한 뒤에는 [내 기록 | 결과] 두 곳만 오간다 (토스 · 카카오뱅크 아래 탭) ---------- */
+
+  const TAB_ICON = {
+    me: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5L6 21z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg>',
+    result: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="14" r="6"/><path d="M8.5 3h7l-2 6.2M10.5 9.2L8.5 3"/><path d="M12 11.5v5"/></svg>',
+    lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
+  };
+
+  function tabbar(code, active) {
+    if (!code || myId(code) == null) return;
+    const state = load(code);
+    if (!state || !member(state, myId(code))) return;
+    const info = roomInfo(state.room);
+    const enc = encodeURIComponent(code);
+    const sealed = !info.result_open;
+    const nav = document.createElement("nav");
+    nav.className = "tabbar";
+    nav.setAttribute("aria-label", "이 방에서 이동");
+    nav.innerHTML = `
+      <a href="/flow/r/${enc}/me"${active === "me" ? ' aria-current="page"' : ""}>${TAB_ICON.me}<span>내 기록</span></a>
+      <a href="/flow/r/${enc}/board"${active === "result" ? ' aria-current="page"' : ""}>${TAB_ICON.result}<span>결과${sealed ? ` <em>${TAB_ICON.lock}D-${info.days_left}</em>` : ""}</span></a>`;
+    document.body.append(nav);
+    document.body.classList.add("has-tabbar");
+  }
+
   return {
     ACCOUNTS, BANK_NAME, md, won, esc, today, addDays, parse, token, accountName, daysLeft, bankLinked, linkBank,
-    load, createRoom, join, myId, member, reset,
+    load, createRoom, join, myId, member, reset, claim, tabbar,
     importTx, updateItem, confirm, giveUp, totals, roomInfo, board, share, toolbar,
   };
 })();

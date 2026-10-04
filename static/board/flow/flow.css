@@ -230,3 +230,52 @@ main.flow-step form.form { flex: 1; display: flex; flex-direction: column; }
 .stepper li { padding-top: 7px; border-top: 3px solid var(--rule); font-size: 12px; font-weight: 700; color: var(--ink-soft); }
 .stepper li.is-done { border-top-color: var(--ink-soft); }
 .stepper li.is-now { border-top-color: var(--ink); color: var(--ink); }
+
+/* 아래 고정 탭: 참여한 뒤 [내 기록 | 결과] 두 곳만 오간다 */
+.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
+  display: flex; justify-content: center; gap: 8px;
+  padding: 6px 12px calc(6px + env(safe-area-inset-bottom, 0px));
+  background: var(--paper, #fff);
+  border-top: 1px solid #e6e6ea;
+  box-shadow: 0 -4px 14px rgba(28, 28, 33, 0.06);
+  font-family: var(--font, "Noto Sans KR", sans-serif);
+}
+.tabbar a {
+  flex: 1; max-width: 200px;
+  display: grid; justify-items: center; gap: 2px;
+  padding: 6px 0 4px; border-radius: 12px;
+  font-size: 12px; font-weight: 700; color: var(--ink-soft, #5e5e68); text-decoration: none;
+}
+.tabbar a svg { width: 22px; height: 22px; }
+.tabbar a[aria-current="page"] { color: var(--ink, #1c1c21); background: #f1f1f4; }
+.tabbar a:focus-visible { outline: 2px solid var(--ink, #1c1c21); outline-offset: 2px; }
+.tabbar em { font-style: normal; display: inline-flex; align-items: center; gap: 2px; font-size: 11px; color: var(--ink-soft, #5e5e68); }
+.tabbar em svg { width: 11px; height: 11px; }
+body.has-tabbar { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+body.has-tabbar .counter { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+.has-tabbar .sticky { bottom: calc(78px + env(safe-area-inset-bottom, 0px)); }
+
+/* 숫자 4자리 */
+.label-sub { font-size: 12px; color: var(--ink-soft); margin-left: 4px; }
+.rejoin-link { margin: -6px 0 14px; text-align: right; }
+.rejoin-link .text-btn { font-size: 13px; font-weight: 700; color: var(--ink); }
+.pick-names { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 8px; }
+.pick-name {
+  all: unset; box-sizing: border-box; cursor: pointer; width: 100%;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 14px; border: 1.5px solid var(--field); border-radius: 12px;
+  font-size: 16px; font-weight: 700; color: var(--ink);
+}
+.pick-name .token { font-size: 13px; }
+.pick-name:hover, .pick-name:focus-visible { border-color: var(--ink); }
+.pin-who { display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 17px; margin: 10px 0 14px; }
+.pin-who .token { font-size: 13px; }
+.pin-form { flex: 1; display: flex; flex-direction: column; }
+.pin-input {
+  width: 100%; max-width: 220px; margin: 6px auto 4px; display: block;
+  min-height: 64px; text-align: center;
+  font-size: 30px; letter-spacing: 0.6em; padding-left: 0.6em;
+  border-radius: 14px;
+}
+.pin-form .danger { text-align: center; }
