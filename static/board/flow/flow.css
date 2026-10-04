@@ -4,20 +4,29 @@
 
 :root { --brand-shield: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 68'%3E%3Cpath d='M6 9 L9 4 L12 9 L15 4 L18 9 L21 4 L24 9 L27 4 L30 9 L33 4 L36 9 L39 4 L42 9 L45 4 L48 9 L51 4 L54 9 V31 C54 46 44 57 30 64 C16 57 6 46 6 31 Z' fill='%23fff' stroke='%231c1c21' stroke-width='3.2' stroke-linejoin='round'/%3E%3Crect x='10' y='28' width='40' height='10' fill='%23e4ff4a'/%3E%3Cpolyline points='17,19 23.5,45 30,26 36.5,45 43,19' fill='none' stroke='%231c1c21' stroke-width='4.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cline x1='10.5' y1='29.5' x2='49.5' y2='29.5' stroke='%231c1c21' stroke-width='3.4' stroke-linecap='round'/%3E%3Cline x1='10.5' y1='36.5' x2='49.5' y2='36.5' stroke='%231c1c21' stroke-width='3.4' stroke-linecap='round'/%3E%3C/svg%3E"); }
 
-/* 시연 도구: 발표하는 사람만 쓴다. 화면 위를 차지하지 않게 오른쪽 위 작은 버튼 하나 + 누르면 아래 시트 */
-.demo-fab {
-  position: fixed; z-index: 30;
-  top: calc(10px + env(safe-area-inset-top, 0px)); right: 10px;
-  display: inline-flex; align-items: center; gap: 6px;
-  min-height: 32px; padding: 0 12px;
-  border: 0; border-radius: 999px;
-  background: rgba(28, 28, 33, 0.78); color: #fff;
-  font: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.02em;
-  cursor: pointer; box-shadow: 0 4px 12px rgba(28, 28, 33, 0.18);
-  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+/* 시연 막대: 영수증 위 회색 바탕에 놓인 어두운 알약. 서비스 화면(흰 영수증)과 질감이 달라 "시연 조작"으로 보인다 */
+.demo-bar {
+  display: flex; align-items: center; gap: 6px;
+  width: fit-content; max-width: 100%;
+  margin: 0 auto 14px; padding: 4px 4px 4px 12px;
+  border-radius: 999px;
+  background: rgba(28, 28, 33, 0.86); color: #fff;
+  font-family: var(--font, "Noto Sans KR", sans-serif);
+  box-shadow: 0 4px 14px rgba(28, 28, 33, 0.18);
 }
-.demo-fab span { background: var(--hl, #e4ff4a); color: var(--ink, #1c1c21); border-radius: 999px; padding: 1px 7px; font-size: 11px; }
-.demo-fab:focus-visible { outline: 3px solid var(--hl, #e4ff4a); outline-offset: 2px; }
+.db-label { font-size: 11px; font-weight: 900; letter-spacing: 0.08em; color: var(--hl, #e4ff4a); }
+.db-seg { display: inline-flex; gap: 2px; background: rgba(255, 255, 255, 0.10); border-radius: 999px; padding: 2px; }
+.db-seg button, .db-more {
+  all: unset; box-sizing: border-box; cursor: pointer;
+  min-height: 32px; padding: 0 12px; border-radius: 999px;
+  font-size: 13px; font-weight: 700; color: rgba(255, 255, 255, 0.72); white-space: nowrap;
+  display: inline-flex; align-items: center; gap: 6px;
+}
+.db-seg button[aria-pressed="true"] { background: #fff; color: var(--ink, #1c1c21); }
+.db-more { padding: 0 10px; font-size: 16px; color: #fff; }
+.db-day { background: var(--hl, #e4ff4a); color: var(--ink, #1c1c21); border-radius: 999px; padding: 1px 7px; font-size: 11px; font-weight: 700; }
+.db-seg button:focus-visible, .db-more:focus-visible { outline: 2px solid var(--hl, #e4ff4a); outline-offset: 1px; }
+.counter .demo-bar { margin-bottom: 0; }
 
 .demo-sheet { position: fixed; inset: 0; z-index: 40; }
 .ds-backdrop { position: absolute; inset: 0; background: rgba(28, 28, 33, 0.45); }
@@ -209,8 +218,8 @@ main.flow-step .step-actions button:disabled { opacity: 0.35; cursor: not-allowe
 .accounts { display: grid; }
 
 /* 참여 흐름(정보 입력 → 은행 연결 → 계좌 선택): 단계가 바뀌어도 영수증 길이와 버튼 자리가 그대로 */
-/* 휴대폰 한 화면에 영수증 전체(아래 톱니까지)가 들어오는 길이. 위아래 여백 몫 80px 제외, 컴퓨터에서는 760px 에서 멈춘다 */
-main.flow-step { min-height: clamp(600px, calc(100dvh - 80px), 760px); display: flex; flex-direction: column; }
+/* 휴대폰 한 화면에 영수증 전체(아래 톱니까지)가 들어오는 길이. 시연 막대와 위아래 여백 몫 134px 제외, 컴퓨터에서는 760px 에서 멈춘다 */
+main.flow-step { min-height: clamp(600px, calc(100dvh - 134px), 760px); display: flex; flex-direction: column; }
 main.flow-step .step-body { flex: 1; display: flex; flex-direction: column; }
 main.flow-step .step-actions { margin-top: auto; padding-top: 18px; display: grid; gap: 10px; }
 .back { justify-self: start; align-self: flex-start; margin: -6px 0 10px; }

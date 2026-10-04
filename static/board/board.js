@@ -93,7 +93,9 @@
       document.head.appendChild(css);
       await loadScript("/static/board/flow/store.js");
       const state = window.Flow.load(code);
-      window.Flow.toolbar(code);   // 오른쪽 위 "시연" 버튼 (시연 도구 시트)
+      window.Flow.toolbar(code);   // 영수증 위 시연 막대 (참여자 시점 | 개발자 시점 + 도구)
+      const bar = document.querySelector(".demo-bar");
+      if (bar) document.querySelector(".counter").prepend(bar);
       if (!state) throw Object.assign(new Error("missing"), { kind: "missing" });
       return { data: window.Flow.board(state, wantPreview), me: window.Flow.myId(code) };
     }
@@ -507,8 +509,8 @@
       const mine = members.find((m) => m.member_id === state.me);
       $("sample-flag").hidden = !isSample || room.preview;
       if (!room.result_open && !room.preview) renderSealed(state);
-      // 결과 페이지로 가려면 조정을 거쳐야 한다 (PRD). 시연용 미리 보기에서는 막지 않는다
-      else if (mine && mine.unconfirmed && !room.preview) renderConfirmFirst(state);
+      // 결과 페이지로 가려면 조정을 거쳐야 한다 (PRD). 시연용 미리 보기(?preview=1)에서는 막지 않는다
+      else if (mine && mine.unconfirmed && !room.preview && !wantPreview) renderConfirmFirst(state);
       else renderResult(state);
       receipt.classList.add("is-printing");
     } catch (e) {

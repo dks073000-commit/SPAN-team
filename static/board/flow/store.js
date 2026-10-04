@@ -96,26 +96,38 @@ window.Flow = (function () {
   const CODE_CHARS = "abcdefghjkmnpqrstuvwxyz23456789";
 
   function seedDemo() {
-    // db/seed.sql 의 데모 방과 같은 구성 (발표자는 시연 중에 직접 참여한다)
+    // db/seed.sql 의 데모 방과 같은 구성: 발표자(가짜 은행 계좌 A, 아직 조정 전) + 이름 · 총액만 있는 3명 + 중도포기 1명
     const at = (m, d, h, mi = 0) => new Date(2026, m - 1, d, h, mi).getTime();
+    const sum = (id, amount, day) => ({ member_id: id, ref: `seed-${id}`, merchant: "시연용 합계", amount, people: 1, excluded: false, auto: null, hint: null, spent_on: `2026-10-0${day}`, created_at: at(10, 3, 12) });
     const state = {
       room: { code: "demo", name: "데모 방", start_date: "2026-10-02", end_date: "2026-10-08" },
-      next_id: 5,
+      next_id: 6,
       members: [
-        { id: 1, nickname: "짠돌이", budget: 100000, account: null, confirmed_at: at(10, 7, 21), gave_up_at: null },
-        { id: 2, nickname: "카페중독", budget: 80000, account: null, confirmed_at: at(10, 7, 22, 30), gave_up_at: null },
-        { id: 3, nickname: "큰손", budget: 70000, account: null, confirmed_at: null, gave_up_at: null },
-        { id: 4, nickname: "포기각", budget: 50000, account: null, confirmed_at: null, gave_up_at: at(10, 4, 23) },
+        { id: 1, nickname: "발표자", budget: 100000, account: "A", confirmed_at: null, gave_up_at: null },
+        { id: 2, nickname: "짠돌이", budget: 100000, account: null, confirmed_at: at(10, 7, 21), gave_up_at: null },
+        { id: 3, nickname: "카페중독", budget: 80000, account: null, confirmed_at: at(10, 7, 22, 30), gave_up_at: null },
+        { id: 4, nickname: "큰손", budget: 70000, account: null, confirmed_at: null, gave_up_at: null },
+        { id: 5, nickname: "포기각", budget: 50000, account: null, confirmed_at: null, gave_up_at: at(10, 4, 23) },
       ],
-      expenses: [
-        { member_id: 1, ref: "seed-1", merchant: "시연용 합계", amount: 22000, people: 1, excluded: false, auto: null, hint: null, spent_on: "2026-10-07", created_at: at(10, 3, 12) },
-        { member_id: 2, ref: "seed-2", merchant: "시연용 합계", amount: 52000, people: 1, excluded: false, auto: null, hint: null, spent_on: "2026-10-07", created_at: at(10, 3, 12) },
-        { member_id: 3, ref: "seed-3", merchant: "시연용 합계", amount: 85000, people: 1, excluded: false, auto: null, hint: null, spent_on: "2026-10-07", created_at: at(10, 3, 12) },
-        { member_id: 4, ref: "seed-4", merchant: "시연용 합계", amount: 61000, people: 1, excluded: false, auto: null, hint: null, spent_on: "2026-10-04", created_at: at(10, 3, 12) },
-      ],
+      expenses: [sum(2, 22000, 7), sum(3, 52000, 7), sum(4, 85000, 7), sum(5, 61000, 4)],
     };
     put(roomKey("demo"), state);
     return state;
+  }
+
+  // 개발자 시점: 새로 만든 방에도 가상 참여자(이름 · 총액만 3명 + 중도포기 1명)를 채워 결과 카드를 보여 준다
+  function fillDummies(code) {
+    const state = load(code);
+    const stamp = now().getTime();
+    const day = state.room.start_date;
+    [["짠돌이", 100000, 22000, true, false], ["카페중독", 80000, 52000, true, false],
+     ["큰손", 70000, 85000, false, false], ["포기각", 50000, 61000, false, true]].forEach(([nickname, budget, amount, confirmed, quit]) => {
+      if (state.members.some((m) => m.nickname === nickname)) return;
+      const id = state.next_id++;
+      state.members.push({ id, nickname, budget, account: null, confirmed_at: confirmed ? stamp + 1 : null, gave_up_at: quit ? stamp : null });
+      state.expenses.push({ member_id: id, ref: `dummy-${id}`, merchant: "시연용 합계", amount, people: 1, excluded: false, auto: null, hint: null, spent_on: day, created_at: stamp });
+    });
+    save(state);
   }
 
   function load(code) {
@@ -272,26 +284,52 @@ window.Flow = (function () {
     return `<span class="token ${pc}${extra ? " " + extra : ""}" aria-hidden="true">${esc(Array.from(String(nickname || "?"))[0])}</span>`;
   }
 
-  /* ---------- 시연 도구 (개발자 시점 버튼) ---------- */
-  // 발표하는 사람만 쓰는 버튼이라 화면 위를 차지하지 않게, 오른쪽 위 작은 "시연" 버튼에 숨긴다.
-  // 누르면 아래에서 시트가 올라온다 (참고: Vercel · Next.js 미리 보기 도구, 은행 앱의 아래 시트)
+  /* ---------- 시연 막대: 영수증 위 "참여자 시점 | 개발자 시점" + ⋯ 도구 (10/3 회의: 버튼 두 개) ---------- */
+  // 서비스 화면(영수증)과 다른 질감의 어두운 막대라 보는 사람이 "시연 조작"인 걸 알 수 있다.
+  //   참여자 시점: 데모방에 계좌 A 로 참여한 발표자가 되어 내 페이지부터 (불러오기 → 1/N · 제외 → 조정 완료 → 결과 카드)
+  //   개발자 시점: 방 만들기부터 기능을 차례로 (링크 → 닉네임 → 은행 연결 → 내 페이지 → 가상 참여자 · 마감 → 결과 카드)
   const DEMO_DAY = "2026-10-08";
+  const MODE_KEY = "flow:mode";
+
+  function startParticipant() {
+    drop(roomKey("demo"));
+    seedDemo();
+    put(meKey("demo"), 1);
+    put(BANK_KEY, true);
+    put(TODAY_KEY, DEMO_DAY);
+    put(MODE_KEY, "participant");
+    location.href = "/flow/r/demo/me";
+  }
+
+  function startDeveloper() {
+    drop(TODAY_KEY);
+    drop(BANK_KEY);   // 은행 연결 동의 화면부터 보여 주기
+    put(MODE_KEY, "developer");
+    location.href = "/flow";
+  }
 
   function toolbar(code, page) {
     const forced = get(TODAY_KEY);
+    const mode = get(MODE_KEY);
     const enc = code ? encodeURIComponent(code) : "";
-    const realToday = (() => { const d = new Date(); return md(ymd(d)); })();
+    const state = code ? load(code) : null;
+    const endDay = state ? state.room.end_date : DEMO_DAY;
+    const realToday = md(ymd(new Date()));
 
-    const fab = document.createElement("button");
-    fab.type = "button";
-    fab.className = "demo-fab";
-    fab.setAttribute("aria-haspopup", "dialog");
-    fab.innerHTML = `시연${forced ? `<span>${md(forced).replace(/\(.\)/, "")}</span>` : ""}`;
-    fab.setAttribute("aria-label", forced ? `시연 도구 열기, 지금 ${md(forced)} 로 보는 중` : "시연 도구 열기");
+    const bar = document.createElement("div");
+    bar.className = "demo-bar";
+    bar.innerHTML = `
+      <span class="db-label">시연</span>
+      <span class="db-seg" role="group" aria-label="시연 시점">
+        <button type="button" data-act="participant" aria-pressed="${mode === "participant"}">참여자 시점</button>
+        <button type="button" data-act="developer" aria-pressed="${mode === "developer"}">개발자 시점</button>
+      </span>
+      <button type="button" class="db-more" data-act="open" aria-haspopup="dialog" aria-label="시연 도구 열기${forced ? `, 지금 ${md(forced)} 로 보는 중` : ""}">${forced ? `<span class="db-day">${md(forced).replace(/\(.\)/, "")}</span>` : ""}<span aria-hidden="true">⋯</span></button>`;
 
     const row = (act, title, desc, href) => href
       ? `<a class="ds-row" href="${href}"><b>${title}</b><span>${desc}</span></a>`
       : `<button type="button" class="ds-row" data-act="${act}"><b>${title}</b><span>${desc}</span></button>`;
+    const hasDummies = state && ["짠돌이", "카페중독", "큰손", "포기각"].every((n) => state.members.some((m) => m.nickname === n));
 
     const sheet = document.createElement("div");
     sheet.className = "demo-sheet";
@@ -305,31 +343,41 @@ window.Flow = (function () {
         <p class="ds-label">오늘 날짜</p>
         <div class="ds-seg" role="radiogroup" aria-label="오늘 날짜">
           <button type="button" role="radio" aria-checked="${!forced}" data-act="day-real">진짜 오늘 <small>${realToday}</small></button>
-          <button type="button" role="radio" aria-checked="${Boolean(forced)}" data-act="day-demo">발표날 <small>${md(DEMO_DAY)}</small></button>
+          <button type="button" role="radio" aria-checked="${Boolean(forced)}" data-act="day-end">마감일 <small>${md(endDay)}</small></button>
         </div>
-        <p class="ds-hint">발표날로 두면 마감일이 된 것처럼 결과 카드가 열려요.</p>
+        <p class="ds-hint">마감일로 두면 결과 카드가 열려요.</p>
         <div class="ds-list">
-          ${code ? row("", "결과 카드 미리 보기", "마감 전이어도 지금 기록으로 결과를 봐요", `/flow/r/${enc}/board?preview=1`) : ""}
-          ${code === "demo" ? "" : row("", "발표용 데모 방 열기", "짠돌이 · 카페중독 · 큰손 · 포기각이 있는 방", "/flow/r/demo")}
+          ${code ? row("", "결과 카드 보기", "마감 전이어도 지금 기록으로 결과를 봐요", `/flow/r/${enc}/board?preview=1`) : ""}
+          ${code && code !== "demo" && !hasDummies ? row("fill", "가상 참여자 채우기", "짠돌이 · 카페중독 · 큰손 · 포기각을 이 방에 넣어요") : ""}
+          ${code === "demo" ? "" : row("", "발표용 데모 방 열기", "발표자 · 짠돌이 · 카페중독 · 큰손 · 포기각이 있는 방", "/flow/r/demo")}
           ${code ? row("reset", "이 방 처음부터 다시", "참여 · 은행 연결 · 불러온 기록을 지워요") : ""}
         </div>
         <button type="button" class="ds-close" data-act="close">닫기</button>
       </section>`;
 
-    const open = () => { sheet.hidden = false; document.body.style.overflow = "hidden"; sheet.querySelector(".ds-close").focus(); };
-    const close = () => { sheet.hidden = true; document.body.style.overflow = ""; fab.focus(); };
-    fab.addEventListener("click", open);
-    sheet.addEventListener("click", (ev) => {
+    const openSheet = () => { sheet.hidden = false; document.body.style.overflow = "hidden"; sheet.querySelector(".ds-close").focus(); };
+    const closeSheet = () => { sheet.hidden = true; document.body.style.overflow = ""; bar.querySelector(".db-more").focus(); };
+    const onAct = (ev) => {
       const el = ev.target.closest("[data-act]");
       if (!el) return;
       const act = el.getAttribute("data-act");
-      if (act === "close") close();
+      if (act === "participant" && mode !== "participant") startParticipant();
+      if (act === "developer" && mode !== "developer") startDeveloper();
+      if (act === "open") openSheet();
+      if (act === "close") closeSheet();
       if (act === "day-real") { drop(TODAY_KEY); location.reload(); }
-      if (act === "day-demo") { put(TODAY_KEY, DEMO_DAY); location.reload(); }
-      if (act === "reset") { reset(code); location.href = code === "demo" ? "/flow/r/demo" : "/flow"; }
-    });
-    document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && !sheet.hidden) close(); });
-    document.body.append(fab, sheet);
+      if (act === "day-end") { put(TODAY_KEY, endDay); location.reload(); }
+      if (act === "fill") { fillDummies(code); location.reload(); }
+      if (act === "reset") {
+        if (code === "demo" && mode === "participant") { startParticipant(); return; }
+        reset(code); location.href = code === "demo" ? "/flow/r/demo" : "/flow";
+      }
+    };
+    bar.addEventListener("click", onAct);
+    sheet.addEventListener("click", onAct);
+    document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && !sheet.hidden) closeSheet(); });
+    document.body.prepend(bar);
+    document.body.append(sheet);
     return page;
   }
 
