@@ -71,8 +71,9 @@
 
     function lineup(meId, joined) {
       if (!state.members.length) return '<p class="who">아직 아무도 없어요. 첫 번째로 참전해요</p>';
-      return `<p class="who">참전 <span class="n">${state.members.length}</span>명</p>
-        <ul class="lineup">${state.members.map((m) => `
+      // "이미 참여했어요"는 참전 줄 제목 오른쪽에 (화면 한 장 길이 안에 들어가게)
+      return `<p class="who who-row"><span>참전 <span class="n">${state.members.length}</span>명</span>${joined ? "" : '<button type="button" id="to-rejoin" class="text-btn">이미 참여했어요</button>'}</p>
+        <ul class="lineup compact">${state.members.map((m) => `
           <li class="player">${F.token(m.id, m.nickname, m.id === meId ? "is-me" : "")}<span class="pname">${F.esc(m.nickname)}</span></li>`).join("")}
           ${joined ? "" : '<li class="player"><span class="token is-empty">+</span><span class="pname">나</span></li>'}</ul>`;
     }
@@ -200,7 +201,6 @@
             ${lineup(null, false)}
             <hr>
             ${params.has("new") ? `<p class="flash">링크가 생겼어요. 단톡방에 보내 주세요</p>${shareBox()}<hr>` : ""}
-            ${state.members.length ? '<p class="rejoin-link"><button type="button" id="to-rejoin" class="text-btn">이미 참여했어요</button></p>' : ""}
             <form id="join" class="form" novalidate>
               <label>닉네임 <input name="nickname" maxlength="20" placeholder="방에서 쓸 이름" autocomplete="off" value="${pending ? F.esc(pending.nickname) : ""}"></label>
               <label>이번 주 예산 (원) <input name="budget" inputmode="numeric" placeholder="예: 100000" autocomplete="off" value="${pending ? pending.budget : ""}"></label>
