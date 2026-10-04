@@ -41,9 +41,10 @@
   const back = params.get("redirect_uri") || "/";
   document.getElementById("redirect_uri").value = back;
   document.getElementById("state").value = params.get("state") || "";
+  // 취소: 아무것도 연결하지 않고 들어오기 전 화면으로 그냥 돌아간다
   document.getElementById("cancel").addEventListener("click", () => {
-    const sep = back.includes("?") ? "&" : "?";
-    location.href = back + sep + "error=cancelled&state=" + encodeURIComponent(params.get("state") || "");
+    if (history.length > 1) history.back();
+    else location.href = back;
   });
 </script>
 </body>
