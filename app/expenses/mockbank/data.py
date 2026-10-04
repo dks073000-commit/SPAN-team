@@ -13,14 +13,20 @@ from datetime import date, datetime, timedelta
 START_DATE = date.fromisoformat(os.environ.get("MOCKBANK_START_DATE", "2026-10-02"))
 
 BANK_NAME = "버티기 가상은행"
-PRODUCT_NAME = "버티기 가상통장"  # 세 계좌 모두 수시입출금 통장
-ACCOUNT_ISSUE_DATE = date(2026, 3, 2)
 
 # (번호, 며칠째, 시간 HH:MM, 통장 표시, 금액, 입출금, 거래구분)
-# 발표자 계좌 하나만 둔다 (데모 방 seed 가 A 를 연결). 다른 참여자는 예시 데이터(목표 예산 · 총액)만 쓴다 (10/5)
+# 발표자(가상 주인 이예시)의 계좌 두 개. 계좌 연결 화면에서 이 중 하나를 고른다 (10/5)
+# - A: 입출금 통장. 시연 거래가 모두 여기 있다 (데모 방 seed 가 A 를 연결)
+# - S: 적금. 출금이 없어서 골라도 불러올 지출이 없다 (A 에서 보낸 "내 계좌 이체"가 들어온다)
+# 다른 참여자는 예시 데이터(목표 예산 · 총액)만 쓴다
 ACCOUNTS = {
     "BTG00000000000000000000A": {
         "label": "가상 계좌 A",
+        "product_name": "버티기 입출금통장",
+        "account_type": "1",  # 오픈뱅킹 명세: 1 수시입출금, 2 예적금, 6 수익증권
+        "masked": "123-****-1234",
+        "issue_date": date(2026, 3, 2),
+        "maturity_date": None,
         "owner": "이예시",
         "opening_balance": 500_000,
         "transactions": [
@@ -37,6 +43,19 @@ ACCOUNTS = {
             ("A-11", 6, "23:40", "택시", 9_800, "출금", "대체"),  # 실제 요금
             ("A-12", 7, "16:30", "치킨집", 48_000, "출금", "대체"),  # 시연: 4명. 발표(10/8 17:00~) 전에 결제
             ("A-13", 7, "16:50", "친구정산", 36_000, "입금", "타행환"),
+        ],
+    },
+    "BTG00000000000000000000S": {
+        "label": "가상 적금",
+        "product_name": "버티기 자유적금",
+        "account_type": "2",
+        "masked": "123-****-5678",
+        "issue_date": date(2026, 3, 2),
+        "maturity_date": date(2027, 3, 2),
+        "owner": "이예시",
+        "opening_balance": 1_200_000,
+        "transactions": [
+            ("S-01", 3, "20:00", "이예시", 100_000, "입금", "타행환"),  # A-05 내 계좌 이체가 들어온 것
         ],
     },
 }

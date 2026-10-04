@@ -3,7 +3,7 @@
 명세 주소                                   여기 주소 (앞에 /api/expenses/mockbank)
 GET /v2.0/account/transaction_list/fin_num   거래내역조회
 GET /v2.0/account/balance/fin_num            잔액조회 (우리 앱 화면에는 쓰지 않는다. 명세를 맞춰 둔 것)
-GET /oauth/2.0/authorize                     계좌 연결 (사용자인증을 흉내 냄: 동의 화면 → 계좌 하나 연결 → 돌려보냄)
+GET /oauth/2.0/authorize                     계좌 연결 (사용자인증을 흉내 냄: 동의 → 내 계좌 선택 → 돌려보냄)
 
 명세와 다른 점 (시연용이라 일부러 단순하게 한 것):
 - 사용자 인증과 토큰을 쓰지 않는다. Authorization 헤더는 없어도, 아무 값이어도 통과한다.
@@ -15,11 +15,12 @@ GET /oauth/2.0/authorize                     계좌 연결 (사용자인증을 �
 import re
 import uuid
 from datetime import datetime, timedelta, timezone
+from html import escape
 from pathlib import Path
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Form, Query
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from app.expenses.mockbank import data
 
@@ -162,6 +163,7 @@ def balance(bank_tran_id: str = "", fintech_use_num: str = "", tran_dtime: str =
         return _error(now, bank_tran_id, *problem)
 
     settled = _settled(fintech_use_num, now)
+    account = data.ACCOUNTS[fintech_use_num]
     amount = str(_balance(fintech_use_num, now))
     return _base(now, bank_tran_id) | {
         "bank_name": data.BANK_NAME,
@@ -169,10 +171,10 @@ def balance(bank_tran_id: str = "", fintech_use_num: str = "", tran_dtime: str =
         "fintech_use_num": fintech_use_num,
         "balance_amt": amount,
         "available_amt": amount,
-        "account_type": "1",  # 수시입출금
-        "product_name": data.PRODUCT_NAME,
-        "account_issue_date": data.ACCOUNT_ISSUE_DATE.strftime("%Y%m%d"),
-        "maturity_date": "",  # 수시입출금이라 만기 없음
+        "account_type": account["account_type"],
+        "product_name": account["product_name"],
+        "account_issue_date": account["issue_date"].strftime("%Y%m%d"),
+        "maturity_date": account["maturity_date"].strftime("%Y%m%d") if account["maturity_date"] else "",
         "last_tran_date": settled[-1]["when"].strftime("%Y%m%d") if settled else "",
     }
 
@@ -181,10 +183,10 @@ def balance(bank_tran_id: str = "", fintech_use_num: str = "", tran_dtime: str =
 # ---------------------------------------------------------------------------
 # 계좌 연결 (오픈뱅킹 사용자인증을 흉내 낸 것)
 #
-# 실제 오픈뱅킹: 앱이 은행 인증 화면(GET /oauth/2.0/authorize)으로 보낸다 → 사용자가 본인 인증 ·
-# 계좌 선택 · 동의 → 은행이 redirect_uri 로 돌려보낸다 → 앱이 토큰을 받아 핀테크이용번호를 얻는다.
-# 가짜 은행: 인증 · 토큰을 생략하고, 동의 버튼 한 번으로 가상 계좌(발표자 시나리오)를 연결해
-# redirect_uri 로 핀테크이용번호를 바로 돌려준다. 아무것도 저장하지 않는다.
+# 실제 오픈뱅킹: 앱이 은행 인증 화면(GET /oauth/2.0/authorize)으로 보낸다 → 사용자가 본인 인증 · 동의 ·
+# 내 계좌 중 쓸 계좌 선택 → 은행이 redirect_uri 로 돌려보낸다 → 앱이 토큰을 받아 핀테크이용번호를 얻는다.
+# 가짜 은행: 본인 인증 · 토큰을 생략한다. ① 동의 → ② 내 계좌 선택 → redirect_uri 로 핀테크이용번호를
+# 바로 돌려준다. 아무것도 저장하지 않는다.
 # ---------------------------------------------------------------------------
 
 AUTH_PAGE = STATIC / "mockbank_authorize.html"
@@ -197,29 +199,38 @@ def _safe_redirect(redirect_uri: str) -> bool:
     return redirect_uri.startswith("/") and not redirect_uri.startswith("//") and "\\" not in redirect_uri
 
 
-def _pick_account() -> str:
-    """연결할 계좌. 지금은 발표자 시나리오 계좌 하나뿐이라 누가 연결해도 같은 계좌가 된다 (10/5).
-    계좌가 여러 개가 되면 여기서 고르면 된다. 테스트에서 바꿔 끼울 수 있게 함수로 둔다."""
-    return next(iter(data.ACCOUNTS))
+def _account_choices() -> str:
+    """② 내 계좌 선택 칸. 은행 이름 + 상품 이름 + 가린 계좌번호만 보여 준다 (잔액 · 주인 이름은 안 보여 줌)."""
+    rows = []
+    for i, (num, account) in enumerate(data.ACCOUNTS.items()):
+        rows.append(
+            f'<label class="pick"><input type="radio" name="fintech_use_num" value="{escape(num)}"'
+            f'{" checked" if i == 0 else ""}>'
+            f'<span><b>{escape(account["product_name"])}</b>'
+            f'<small>{escape(data.BANK_NAME)} {escape(account["masked"])}</small></span></label>'
+        )
+    return "\n".join(rows)
 
 
 @router.get("/oauth/2.0/authorize", include_in_schema=False)
 def authorize_page(redirect_uri: str = "", state: str = ""):
-    """가짜 은행 인증 화면. 참여 폼의 [계좌 연결하기] 버튼이 이 주소로 보낸다."""
+    """가짜 은행 인증 화면. 참여 폼의 [은행 연결하기] 버튼이 이 주소로 보낸다."""
     if not _safe_redirect(redirect_uri):
         return HTMLResponse("redirect_uri 는 같은 사이트 안의 주소(/로 시작)여야 합니다.", status_code=400)
-    return FileResponse(AUTH_PAGE)
+    page = AUTH_PAGE.read_text(encoding="utf-8").replace("<!--ACCOUNTS-->", _account_choices())
+    return HTMLResponse(page)
 
 
 @router.post("/oauth/2.0/authorize", include_in_schema=False)
-def authorize_agree(redirect_uri: str = Form(""), state: str = Form("")):
-    """[동의하고 연결]을 누르면 계좌 하나를 연결하고 redirect_uri 로 돌려보낸다."""
+def authorize_agree(redirect_uri: str = Form(""), state: str = Form(""), fintech_use_num: str = Form("")):
+    """동의하고 고른 계좌를 연결해 redirect_uri 로 돌려보낸다."""
     if not _safe_redirect(redirect_uri):
         return HTMLResponse("redirect_uri 는 같은 사이트 안의 주소(/로 시작)여야 합니다.", status_code=400)
-    fintech_use_num = _pick_account()
+    if fintech_use_num not in data.ACCOUNTS:
+        return HTMLResponse("연결할 계좌를 골라 주세요.", status_code=400)
     query = urlencode({
         "fintech_use_num": fintech_use_num,
-        "account_alias": data.ACCOUNTS[fintech_use_num]["label"],
+        "account_alias": data.ACCOUNTS[fintech_use_num]["product_name"],
         "state": state,
     })
     return RedirectResponse(f"{redirect_uri}{'&' if '?' in redirect_uri else '?'}{query}", status_code=303)
