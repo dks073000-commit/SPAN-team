@@ -24,6 +24,12 @@ create table if not exists members (
 
 create index if not exists members_room_code_idx on members(room_code);
 
+-- 10/3 회의: 미제출을 없애고 미확인 · 항복을 둔다.
+-- 이미 만든 DB 에도 칸이 붙도록 alter 로 쓴다.
+alter table members add column if not exists fintech_use_num text;        -- 참여할 때 고른 가짜 은행 계좌 번호 (오픈뱅킹 명세 이름)
+alter table members add column if not exists confirmed_at    timestamptz; -- 항목 조정(1/N · 제외)을 마친 시각. null = 미확인
+alter table members add column if not exists gave_up_at      timestamptz; -- 항복한 시각. null = 진행 중. 먼저 포기한 사람이 맨 아래
+
 create table if not exists expenses (
     id         bigint generated always as identity primary key,
     member_id  bigint not null references members(id) on delete cascade,
