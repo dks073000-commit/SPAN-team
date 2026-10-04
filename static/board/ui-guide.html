@@ -34,7 +34,7 @@
     .screen-name { text-align: center; font-size: 13px; color: var(--ink-soft); margin: 0 0 6px; }
     .screen-name a { color: inherit; }
     /* 가이드 안 예시 화면도 실제처럼 같은 길이 (참여 흐름 세 단계) */
-    .paper.flow-step { min-height: 760px; display: flex; flex-direction: column; }
+    .paper.flow-step { min-height: 714px; display: flex; flex-direction: column; }
     .paper.flow-step .step-body { flex: 1; display: flex; flex-direction: column; }
     .paper.flow-step .step-actions { margin-top: auto; padding-top: 18px; }
   </style>
@@ -145,12 +145,12 @@
   <h2>참여 흐름 (단계 표시 · 계좌 조회 동의)</h2>
   <ol class="stepper"><li class="is-done">정보 입력</li><li class="is-now" aria-current="step">은행 연결</li><li>계좌 선택</li></ol>
   <ul class="scope">
-    <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><div><b>텅장방어전이 보는 것</b><span>10/2(금) ~ 10/8(목) 출금 내역의<br>날짜 · 금액 · 가게 이름만</span></div></li>
-    <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><div><b>텅장방어전이 못 하는 것</b><span>송금 · 결제 · 대출은 할 수 없어요<br>은행 비밀번호도 받지 않아요</span></div></li>
-    <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3.2 3.2 0 0 1 0 6.3M18 14.3c1.8.8 3 2.6 3 4.7"/></svg></span><div><b>친구가 보는 것</b><span>총액과 순위만<br>어디서 썼는지는 나만 봐요</span></div></li>
-    <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span><div><b>지우는 때</b><span>방이 끝나면 지워요<br>원하면 언제든 연결을 끊을 수 있어요</span></div></li>
+    <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><div><b>텅장방어전이 보는 것</b><span>날짜 · 금액 · 가게 이름</span></div></li>
+    <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><div><b>텅장방어전이 못 하는 것</b><span>송금 · 결제 · 비밀번호 저장</span></div></li>
+    <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3.2 3.2 0 0 1 0 6.3M18 14.3c1.8.8 3 2.6 3 4.7"/></svg></span><div><b>친구가 보는 것</b><span>총액과 순위만</span></div></li>
+    <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span><div><b>지우는 때</b><span>방이 끝나면 바로</span></div></li>
   </ul>
-  <p class="muted" style="margin-top:12px">참여는 실제 오픈뱅킹 순서: 정보 입력 → 은행 연결(사용자 인증 · 동의) → 계좌 선택. 세 단계는 <b>휴대폰 한 화면 길이로 같고 기본 버튼은 맨 아래</b>(<code>flow-step</code>, <code>.step-actions</code>). 동의 화면은 <code>.scope</code> 목록으로 <b>주어를 붙여</b>(텅장방어전이 보는 것 · 못 하는 것 · 친구가 보는 것 · 지우는 때) 한 줄씩 쓰고, 사람 색 · VS 같은 게임 요소는 넣지 않아요. [필수] 체크 전에는 버튼을 막아요.</p>
+  <p class="muted" style="margin-top:12px">참여는 실제 오픈뱅킹 순서: 정보 입력 → 은행 연결(사용자 인증 · 동의) → 계좌 선택. 세 단계는 <b>휴대폰 한 화면 안에 영수증 전체가 들어오는 같은 길이, 기본 버튼은 맨 아래</b>(<code>flow-step</code>, <code>.step-actions</code>). 동의 화면은 <code>.scope</code> 목록으로 <b>주어를 붙여</b>(텅장방어전이 보는 것 · 못 하는 것 · 친구가 보는 것 · 지우는 때) 한 줄씩 짧게 쓰고(기간은 제목 아래 한 줄), 사람 색 · VS 같은 게임 요소는 넣지 않아요. [필수] 체크 전에는 버튼을 막아요.</p>
 
   <hr>
   <h2>안내 띠</h2>
@@ -241,12 +241,12 @@
           <span class="lv-end"><span class="lv-ic lv-bank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10h18L12 4 3 10z"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/></svg></span><small>가상은행</small></span>
         </div>
         <h1 class="consent-title">계좌 조회를 허락해 주세요</h1>
-        <p class="muted consent-demo">시연용 가상은행이에요. 실제 은행과 연결되지 않아요.</p>
+        <p class="muted consent-sub">10/2(금) ~ 10/8(목) 출금 내역만 봐요</p>
         <ul class="scope">
-              <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><div><b>텅장방어전이 보는 것</b><span>10/2(금) ~ 10/8(목) 출금 내역의<br>날짜 · 금액 · 가게 이름만</span></div></li>
-              <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><div><b>텅장방어전이 못 하는 것</b><span>송금 · 결제 · 대출은 할 수 없어요<br>은행 비밀번호도 받지 않아요</span></div></li>
-              <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3.2 3.2 0 0 1 0 6.3M18 14.3c1.8.8 3 2.6 3 4.7"/></svg></span><div><b>친구가 보는 것</b><span>총액과 순위만<br>어디서 썼는지는 나만 봐요</span></div></li>
-              <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span><div><b>지우는 때</b><span>방이 끝나면 지워요<br>원하면 언제든 연결을 끊을 수 있어요</span></div></li>
+              <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><div><b>텅장방어전이 보는 것</b><span>날짜 · 금액 · 가게 이름</span></div></li>
+              <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><div><b>텅장방어전이 못 하는 것</b><span>송금 · 결제 · 비밀번호 저장</span></div></li>
+              <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3.2 3.2 0 0 1 0 6.3M18 14.3c1.8.8 3 2.6 3 4.7"/></svg></span><div><b>친구가 보는 것</b><span>총액과 순위만</span></div></li>
+              <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span><div><b>지우는 때</b><span>방이 끝나면 바로</span></div></li>
             </ul>
         <details class="terms"><summary>동의 내용 자세히 보기</summary><dl>
           <div><dt>정보를 받는 곳</dt><dd>텅장방어전 (SPAN 팀)</dd></div>

@@ -110,16 +110,12 @@
               <span class="lv-end"><span class="lv-ic lv-bank">${ICON.bank}</span><small>${F.BANK_NAME}</small></span>
             </div>
             <h1 class="consent-title">계좌 조회를 허락해 주세요</h1>
-            <p class="muted consent-demo">시연용 가상은행이에요. 실제 은행과 연결되지 않아요.</p>
+            <p class="muted consent-sub">${F.md(info.start_date)} ~ ${F.md(info.end_date)} 출금 내역만 봐요</p>
             <ul class="scope">
-              <li><span class="sc-ic">${ICON.eye}</span><div><b>텅장방어전이 보는 것</b>
-                <span>${F.md(info.start_date)} ~ ${F.md(info.end_date)} 출금 내역의<br>날짜 · 금액 · 가게 이름만</span></div></li>
-              <li><span class="sc-ic">${ICON.lock}</span><div><b>텅장방어전이 못 하는 것</b>
-                <span>송금 · 결제 · 대출은 할 수 없어요<br>은행 비밀번호도 받지 않아요</span></div></li>
-              <li><span class="sc-ic">${ICON.people}</span><div><b>친구가 보는 것</b>
-                <span>총액과 순위만<br>어디서 썼는지는 나만 봐요</span></div></li>
-              <li><span class="sc-ic">${ICON.trash}</span><div><b>지우는 때</b>
-                <span>방이 끝나면 지워요<br>원하면 언제든 연결을 끊을 수 있어요</span></div></li>
+              <li><span class="sc-ic">${ICON.eye}</span><div><b>텅장방어전이 보는 것</b><span>날짜 · 금액 · 가게 이름</span></div></li>
+              <li><span class="sc-ic">${ICON.lock}</span><div><b>텅장방어전이 못 하는 것</b><span>송금 · 결제 · 비밀번호 저장</span></div></li>
+              <li><span class="sc-ic">${ICON.people}</span><div><b>친구가 보는 것</b><span>총액과 순위만</span></div></li>
+              <li><span class="sc-ic">${ICON.trash}</span><div><b>지우는 때</b><span>방이 끝나면 바로</span></div></li>
             </ul>
             <details class="terms">
               <summary>동의 내용 자세히 보기</summary>
