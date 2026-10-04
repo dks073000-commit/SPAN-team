@@ -272,28 +272,64 @@ window.Flow = (function () {
     return `<span class="token ${pc}${extra ? " " + extra : ""}" aria-hidden="true">${esc(Array.from(String(nickname || "?"))[0])}</span>`;
   }
 
-  /* ---------- 시연 도구 막대 (개발자 시점 버튼) ---------- */
+  /* ---------- 시연 도구 (개발자 시점 버튼) ---------- */
+  // 발표하는 사람만 쓰는 버튼이라 화면 위를 차지하지 않게, 오른쪽 위 작은 "시연" 버튼에 숨긴다.
+  // 누르면 아래에서 시트가 올라온다 (참고: Vercel · Next.js 미리 보기 도구, 은행 앱의 아래 시트)
+  const DEMO_DAY = "2026-10-08";
 
   function toolbar(code, page) {
     const forced = get(TODAY_KEY);
-    const bar = document.createElement("nav");
-    bar.className = "flowbar";
-    bar.setAttribute("aria-label", "시연 도구");
-    const preview = code ? `<a href="/flow/r/${encodeURIComponent(code)}/board?preview=1">결과 미리 보기</a>` : "";
-    const reset = code ? '<button type="button" data-act="reset">이 방 처음부터</button>' : "";
-    const demo = code === "demo" ? "" : '<a href="/flow/r/demo">발표용 데모 방</a>';
-    bar.innerHTML = `
-      <span class="fb-chip">시연 모드</span>
-      ${demo}
-      ${preview}
-      <button type="button" data-act="day">${forced ? `날짜 ${md(forced)} → 진짜 오늘로` : "발표날(10/8)로 보기"}</button>
-      ${reset}`;
-    bar.addEventListener("click", (ev) => {
-      const act = ev.target.getAttribute("data-act");
-      if (act === "day") { if (forced) drop(TODAY_KEY); else put(TODAY_KEY, "2026-10-08"); location.reload(); }
+    const enc = code ? encodeURIComponent(code) : "";
+    const realToday = (() => { const d = new Date(); return md(ymd(d)); })();
+
+    const fab = document.createElement("button");
+    fab.type = "button";
+    fab.className = "demo-fab";
+    fab.setAttribute("aria-haspopup", "dialog");
+    fab.innerHTML = `시연${forced ? `<span>${md(forced).replace(/\(.\)/, "")}</span>` : ""}`;
+    fab.setAttribute("aria-label", forced ? `시연 도구 열기, 지금 ${md(forced)} 로 보는 중` : "시연 도구 열기");
+
+    const row = (act, title, desc, href) => href
+      ? `<a class="ds-row" href="${href}"><b>${title}</b><span>${desc}</span></a>`
+      : `<button type="button" class="ds-row" data-act="${act}"><b>${title}</b><span>${desc}</span></button>`;
+
+    const sheet = document.createElement("div");
+    sheet.className = "demo-sheet";
+    sheet.hidden = true;
+    sheet.innerHTML = `
+      <div class="ds-backdrop" data-act="close"></div>
+      <section class="ds-panel" role="dialog" aria-modal="true" aria-labelledby="ds-title">
+        <span class="ds-handle" aria-hidden="true"></span>
+        <h2 id="ds-title">시연 도구</h2>
+        <p class="ds-sub">발표할 때만 쓰는 버튼이에요. 실제 서비스에는 없어요.</p>
+        <p class="ds-label">오늘 날짜</p>
+        <div class="ds-seg" role="radiogroup" aria-label="오늘 날짜">
+          <button type="button" role="radio" aria-checked="${!forced}" data-act="day-real">진짜 오늘 <small>${realToday}</small></button>
+          <button type="button" role="radio" aria-checked="${Boolean(forced)}" data-act="day-demo">발표날 <small>${md(DEMO_DAY)}</small></button>
+        </div>
+        <p class="ds-hint">발표날로 두면 마감일이 된 것처럼 결과 카드가 열려요.</p>
+        <div class="ds-list">
+          ${code ? row("", "결과 카드 미리 보기", "마감 전이어도 지금 기록으로 결과를 봐요", `/flow/r/${enc}/board?preview=1`) : ""}
+          ${code === "demo" ? "" : row("", "발표용 데모 방 열기", "짠돌이 · 카페중독 · 큰손 · 포기각이 있는 방", "/flow/r/demo")}
+          ${code ? row("reset", "이 방 처음부터 다시", "참여 · 은행 연결 · 불러온 기록을 지워요") : ""}
+        </div>
+        <button type="button" class="ds-close" data-act="close">닫기</button>
+      </section>`;
+
+    const open = () => { sheet.hidden = false; document.body.style.overflow = "hidden"; sheet.querySelector(".ds-close").focus(); };
+    const close = () => { sheet.hidden = true; document.body.style.overflow = ""; fab.focus(); };
+    fab.addEventListener("click", open);
+    sheet.addEventListener("click", (ev) => {
+      const el = ev.target.closest("[data-act]");
+      if (!el) return;
+      const act = el.getAttribute("data-act");
+      if (act === "close") close();
+      if (act === "day-real") { drop(TODAY_KEY); location.reload(); }
+      if (act === "day-demo") { put(TODAY_KEY, DEMO_DAY); location.reload(); }
       if (act === "reset") { reset(code); location.href = code === "demo" ? "/flow/r/demo" : "/flow"; }
     });
-    document.body.prepend(bar);
+    document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && !sheet.hidden) close(); });
+    document.body.append(fab, sheet);
     return page;
   }
 

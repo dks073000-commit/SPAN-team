@@ -93,10 +93,7 @@
       document.head.appendChild(css);
       await loadScript("/static/board/flow/store.js");
       const state = window.Flow.load(code);
-      window.Flow.toolbar(code);
-      // 도구 막대를 계산대 안 맨 위로 옮긴다
-      const bar = document.querySelector(".flowbar");
-      if (bar) { document.querySelector(".counter").prepend(bar); }
+      window.Flow.toolbar(code);   // 오른쪽 위 "시연" 버튼 (시연 도구 시트)
       if (!state) throw Object.assign(new Error("missing"), { kind: "missing" });
       return { data: window.Flow.board(state, wantPreview), me: window.Flow.myId(code) };
     }

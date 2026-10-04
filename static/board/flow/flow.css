@@ -4,34 +4,59 @@
 
 :root { --brand-shield: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 60 68'%3E%3Cpath d='M6 9 L9 4 L12 9 L15 4 L18 9 L21 4 L24 9 L27 4 L30 9 L33 4 L36 9 L39 4 L42 9 L45 4 L48 9 L51 4 L54 9 V31 C54 46 44 57 30 64 C16 57 6 46 6 31 Z' fill='%23fff' stroke='%231c1c21' stroke-width='3.2' stroke-linejoin='round'/%3E%3Crect x='10' y='28' width='40' height='10' fill='%23e4ff4a'/%3E%3Cpolyline points='17,19 23.5,45 30,26 36.5,45 43,19' fill='none' stroke='%231c1c21' stroke-width='4.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cline x1='10.5' y1='29.5' x2='49.5' y2='29.5' stroke='%231c1c21' stroke-width='3.4' stroke-linecap='round'/%3E%3Cline x1='10.5' y1='36.5' x2='49.5' y2='36.5' stroke='%231c1c21' stroke-width='3.4' stroke-linecap='round'/%3E%3C/svg%3E"); }
 
-/* 시연 도구 막대: 영수증 밖, 맨 위. 실제 서비스에는 없다. 화면과 경쟁하지 않게 작고 흐리게 */
-.flowbar {
-  max-width: 480px;
-  margin: 0 auto 12px;
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 4px 12px;
-  font-size: 12px;
-  color: var(--ink-soft, #5e5e68);
+/* 시연 도구: 발표하는 사람만 쓴다. 화면 위를 차지하지 않게 오른쪽 위 작은 버튼 하나 + 누르면 아래 시트 */
+.demo-fab {
+  position: fixed; z-index: 30;
+  top: calc(10px + env(safe-area-inset-top, 0px)); right: 10px;
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 32px; padding: 0 12px;
+  border: 0; border-radius: 999px;
+  background: rgba(28, 28, 33, 0.78); color: #fff;
+  font: inherit; font-size: 12px; font-weight: 700; letter-spacing: 0.02em;
+  cursor: pointer; box-shadow: 0 4px 12px rgba(28, 28, 33, 0.18);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
 }
-.flowbar .fb-chip {
-  border: 1px solid currentColor;
-  border-radius: 999px;
-  padding: 0 8px;
-  font-weight: 700;
+.demo-fab span { background: var(--hl, #e4ff4a); color: var(--ink, #1c1c21); border-radius: 999px; padding: 1px 7px; font-size: 11px; }
+.demo-fab:focus-visible { outline: 3px solid var(--hl, #e4ff4a); outline-offset: 2px; }
+
+.demo-sheet { position: fixed; inset: 0; z-index: 40; }
+.ds-backdrop { position: absolute; inset: 0; background: rgba(28, 28, 33, 0.45); }
+.ds-panel {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  max-width: 480px; margin: 0 auto;
+  background: var(--paper, #fff); color: var(--ink, #1c1c21);
+  border-radius: 20px 20px 0 0;
+  padding: 10px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -10px 30px rgba(28, 28, 33, 0.18);
+  font-family: var(--font, "Noto Sans KR", sans-serif);
+  animation: ds-up 220ms cubic-bezier(0.16, 1, 0.3, 1);
 }
-.flowbar a,
-.flowbar button {
-  all: unset;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
+@keyframes ds-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .ds-panel { animation: none; } }
+.ds-handle { display: block; width: 40px; height: 4px; border-radius: 4px; background: var(--rule, #b9b9c2); margin: 0 auto 14px; }
+.ds-panel h2 { font-size: 19px; font-weight: 900; margin: 0 0 4px; }
+.ds-sub { font-size: 13px; color: var(--ink-soft, #5e5e68); margin: 0 0 18px; }
+.ds-label { font-size: 13px; font-weight: 700; color: var(--ink-soft, #5e5e68); margin: 0 0 8px; }
+.ds-seg { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: #f1f1f4; border-radius: 12px; padding: 4px; }
+.ds-seg button {
+  all: unset; box-sizing: border-box; display: grid; justify-items: center; gap: 1px;
+  min-height: 48px; padding: 6px; border-radius: 9px; cursor: pointer;
+  font-size: 14px; font-weight: 700; color: var(--ink-soft, #5e5e68); text-align: center;
 }
-.flowbar a:focus-visible,
-.flowbar button:focus-visible { outline: 2px solid var(--ink, #1c1c21); outline-offset: 2px; border-radius: 3px; }
-.counter .flowbar { margin-bottom: 0; }
+.ds-seg button small { font-size: 12px; font-weight: 500; }
+.ds-seg button[aria-checked="true"] { background: var(--paper, #fff); color: var(--ink, #1c1c21); box-shadow: 0 1px 3px rgba(28, 28, 33, 0.15); }
+.ds-seg button:focus-visible { outline: 2px solid var(--ink, #1c1c21); outline-offset: 1px; }
+.ds-hint { font-size: 12.5px; color: var(--ink-soft, #5e5e68); margin: 8px 2px 16px; }
+.ds-list { display: grid; border-top: 1px solid #ececf0; }
+.ds-row {
+  all: unset; box-sizing: border-box; display: grid; gap: 2px; cursor: pointer;
+  padding: 13px 28px 13px 2px; border-bottom: 1px solid #ececf0; position: relative;
+}
+.ds-row::after { content: "›"; position: absolute; right: 6px; top: 50%; translate: 0 -50%; font-size: 20px; color: var(--rule, #b9b9c2); }
+.ds-row b { font-size: 15px; font-weight: 700; color: var(--ink, #1c1c21); }
+.ds-row span { font-size: 13px; color: var(--ink-soft, #5e5e68); }
+.ds-row:focus-visible { outline: 2px solid var(--ink, #1c1c21); outline-offset: -2px; border-radius: 6px; }
+.ds-close { width: 100%; margin-top: 16px; }
 
 /* 영수증 머리: 서비스 이름 (로고가 정해지면 이 자리) */
 main > .brand, .paper > .brand { display: flex; align-items: center; justify-content: center; gap: 7px; font-weight: 900; font-size: 18px; letter-spacing: -0.01em; margin: 0 0 18px; }
@@ -184,8 +209,8 @@ main.flow-step .step-actions button:disabled { opacity: 0.35; cursor: not-allowe
 .accounts { display: grid; }
 
 /* 참여 흐름(정보 입력 → 은행 연결 → 계좌 선택): 단계가 바뀌어도 영수증 길이와 버튼 자리가 그대로 */
-/* 휴대폰 한 화면에 영수증 전체(아래 톱니까지)가 들어오는 길이. 위 도구 막대 · 여백 몫 130px 제외, 컴퓨터에서는 760px 에서 멈춘다 */
-main.flow-step { min-height: clamp(600px, calc(100dvh - 130px), 760px); display: flex; flex-direction: column; }
+/* 휴대폰 한 화면에 영수증 전체(아래 톱니까지)가 들어오는 길이. 위아래 여백 몫 80px 제외, 컴퓨터에서는 760px 에서 멈춘다 */
+main.flow-step { min-height: clamp(600px, calc(100dvh - 80px), 760px); display: flex; flex-direction: column; }
 main.flow-step .step-body { flex: 1; display: flex; flex-direction: column; }
 main.flow-step .step-actions { margin-top: auto; padding-top: 18px; display: grid; gap: 10px; }
 .back { justify-self: start; align-self: flex-start; margin: -6px 0 10px; }
