@@ -192,6 +192,8 @@ AUTH_PAGE = STATIC / "mockbank_authorize.html"
 
 def _safe_redirect(redirect_uri: str) -> bool:
     """같은 사이트 안의 주소("/r/abc" 같은)만 허용한다. 다른 사이트로 보내는 데 쓰이지 않게."""
+    if any(c.isspace() or ord(c) < 32 for c in redirect_uri):
+        return False  # 브라우저는 주소 속 탭 · 줄바꿈을 지워서 "/\t/evil" 이 "//evil" 이 된다
     return redirect_uri.startswith("/") and not redirect_uri.startswith("//") and "\\" not in redirect_uri
 
 
