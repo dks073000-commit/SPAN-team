@@ -214,7 +214,7 @@ def test_connect_gives_the_presenter_account():
     assert f"fintech_use_num={A}" in res.headers["location"]
 
 
-@pytest.mark.parametrize("bad", ["", "https://evil.example", "//evil.example", "/\\evil.example"])
+@pytest.mark.parametrize("bad", ["", "https://evil.example", "//evil.example", "/\\evil.example", "/\t/evil.example", "/\n/evil"])
 def test_connect_only_redirects_inside_site(bad):
     assert client.get(AUTH_URL, params={"redirect_uri": bad}).status_code == 400
     assert client.post(AUTH_URL, data={"redirect_uri": bad}, follow_redirects=False).status_code == 400
