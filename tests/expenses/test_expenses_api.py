@@ -137,7 +137,7 @@ def test_badge_says_recommended_when_user_puts_auto_excluded_back(room):
     assert taxi["badges"] == ["가승인 · 제외 권장"] and taxi["my_share"] == 20000
 
 
-def test_spent_rounds_once_like_the_formula(room):
+def test_spent_matches_board_rounding(room):
     me_id = room["발표자"]
     db.execute(
         "insert into expenses (member_id, spent_on, merchant, amount, people, excluded, source) values "
@@ -146,4 +146,10 @@ def test_spent_rounds_once_like_the_formula(room):
     )
     s = me(me_id)
     assert [i["my_share"] for i in s["items"]] == [3333, 3333]
-    assert s["spent"] == 6667  # 10000/3 + 10000/3 = 6666.67 → 6667 (계산식 그대로 더한 뒤 반올림)
+    assert s["spent"] == 6666  # 항목마다 반올림한 3,333 + 3,333 (보드 calc.py 와 같은 규칙)
+    db.execute(
+        "insert into expenses (member_id, spent_on, merchant, amount, people, excluded, source) values "
+        "(%s, date '2026-10-03', '반올림', 5, 2, false, 'manual')",
+        (me_id,),
+    )
+    assert me(me_id)["spent"] == 6666 + 3  # 2.5 → 3 (0.5 는 올림)
