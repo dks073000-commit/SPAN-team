@@ -14,10 +14,11 @@ from app.main import app
 client = TestClient(app)
 
 URL = "/api/expenses/mockbank/v2.0/account/transaction_list/fin_num"
-A, B, C = (f"BTG00000000000000000000{x}" for x in "ABC")
+A, B, C, D = (f"BTG00000000000000000000{x}" for x in "ABCD")
+PRESENTER = A  # 시연 장면(치킨 · 택시 가승인 · 중복)이 있는 계좌
 
 
-def ask(fintech_use_num=B, **overrides):
+def ask(fintech_use_num=PRESENTER, **overrides):
     params = {
         "bank_tran_id": "M202600001U123456789",
         "fintech_use_num": fintech_use_num,
@@ -62,17 +63,18 @@ def test_response_has_spec_fields():
 
 def test_first_day_is_start_date_and_day_zero_is_before():
     rows = ask()["res_list"]
-    assert (rows[0]["tran_date"], rows[0]["print_content"]) == ("20261001", "식당")  # B-01, 0일째
-    assert (rows[1]["tran_date"], rows[1]["print_content"]) == ("20261002", "카페")  # B-02, 1일째
+    assert (rows[0]["tran_date"], rows[0]["print_content"]) == ("20261001", "식당")  # A-01, 0일째
+    assert (rows[1]["tran_date"], rows[1]["print_content"]) == ("20261002", "카페")  # A-02, 1일째
 
 
 def test_counts_per_account():
     def count(num, kind):
         return len(ask(num, inquiry_type=kind)["res_list"])
 
-    assert (count(A, "O"), count(A, "I")) == (8, 0)
-    assert (count(B, "O"), count(B, "I")) == (9, 2)
+    assert (count(A, "O"), count(A, "I")) == (9, 2)
+    assert (count(B, "O"), count(B, "I")) == (8, 0)
     assert (count(C, "O"), count(C, "I")) == (9, 1)
+    assert (count(D, "O"), count(D, "I")) == (8, 0)
 
 
 def test_withdrawals_only():
@@ -96,7 +98,7 @@ def test_chicken_appears_after_payment(monkeypatch):
 
 def test_date_range_and_time_range():
     rows = ask(from_date="20261005", to_date="20261005")["res_list"]
-    assert [r["print_content"] for r in rows] == ["편의점", "편의점"]  # B-04, B-05
+    assert [r["print_content"] for r in rows] == ["편의점", "편의점"]  # A-04, A-05
 
     rows = ask(inquiry_base="T", from_date="20261007", from_time="232000", to_date="20261007", to_time="235959")["res_list"]
     assert [(r["inout_type"], r["tran_amt"]) for r in rows] == [("입금", "20000"), ("출금", "9800")]
@@ -152,7 +154,7 @@ def test_bad_requests(overrides, code):
 BALANCE_URL = "/api/expenses/mockbank/v2.0/account/balance/fin_num"
 
 
-def ask_balance(fintech_use_num=B, **overrides):
+def ask_balance(fintech_use_num=PRESENTER, **overrides):
     params = {
         "bank_tran_id": "M202600001U123456789",
         "fintech_use_num": fintech_use_num,
@@ -213,7 +215,7 @@ def test_connect_returns_account_to_redirect_uri(monkeypatch):
 def test_connect_picks_one_of_the_virtual_accounts():
     for _ in range(10):
         res = client.post(AUTH_URL, data={"redirect_uri": "/r/demo"}, follow_redirects=False)
-        assert any(f"fintech_use_num={num}" in res.headers["location"] for num in (A, B, C))
+        assert any(f"fintech_use_num={num}" in res.headers["location"] for num in (A, B, C, D))
 
 
 @pytest.mark.parametrize("bad", ["", "https://evil.example", "//evil.example", "/\\evil.example"])
