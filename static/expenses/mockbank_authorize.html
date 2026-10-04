@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>버티기 가상은행 · 계좌 연결</title>
+  <link rel="stylesheet" href="/static/common.css">
+  <style>
+    .bank { font-weight: 700; color: var(--accent); margin: 0 0 4px; }
+    .note { background: #f3f4f6; border-radius: 8px; padding: 12px; font-size: 14px; color: var(--muted); }
+    ul { padding-left: 20px; }
+    .actions { display: flex; gap: 8px; margin-top: 24px; }
+    .actions button { flex: 1; padding: 12px; font-size: 16px; border-radius: 8px; border: 1px solid var(--line); background: #fff; }
+    .actions .agree { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
+  </style>
+</head>
+<body>
+<main>
+  <p class="bank">버티기 가상은행</p>
+  <h1>계좌 연결</h1>
+  <p class="note">시연용 가상 계좌입니다. 실제 은행·계좌와 연결되지 않습니다.<br>
+    실제 서비스에서는 이 자리에 은행 본인 인증 화면이 뜹니다.</p>
+
+  <p><strong>버티기</strong> 앱이 아래 정보를 조회하도록 허락할까요?</p>
+  <ul>
+    <li>출금·입금 거래내역</li>
+  </ul>
+  <p class="muted">잔액과 계좌 주인 이름은 앱에 저장되지 않습니다.</p>
+
+  <form method="post" action="/api/expenses/mockbank/oauth/2.0/authorize">
+    <input type="hidden" name="redirect_uri" id="redirect_uri">
+    <input type="hidden" name="state" id="state">
+    <div class="actions">
+      <button type="button" id="cancel">취소</button>
+      <button type="submit" class="agree">동의하고 연결</button>
+    </div>
+  </form>
+</main>
+<script>
+  const params = new URLSearchParams(location.search);
+  const back = params.get("redirect_uri") || "/";
+  document.getElementById("redirect_uri").value = back;
+  document.getElementById("state").value = params.get("state") || "";
+  document.getElementById("cancel").addEventListener("click", () => {
+    const sep = back.includes("?") ? "&" : "?";
+    location.href = back + sep + "error=cancelled&state=" + encodeURIComponent(params.get("state") || "");
+  });
+</script>
+</body>
+</html>

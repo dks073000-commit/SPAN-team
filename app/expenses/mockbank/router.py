@@ -3,7 +3,7 @@
 명세 주소                                   여기 주소 (앞에 /api/expenses/mockbank)
 GET /v2.0/account/transaction_list/fin_num   거래내역조회
 GET /v2.0/account/balance/fin_num            잔액조회 (우리 앱 화면에는 쓰지 않는다. 명세를 맞춰 둔 것)
-(명세에 없음)                                 GET /accounts  가짜 은행 전용 계좌 목록 (참여 폼에서 계좌를 고를 때)
+GET /oauth/2.0/authorize                     계좌 연결 (사용자인증을 흉내 냄: 동의 화면 → 계좌 하나 연결 → 돌려보냄)
 
 명세와 다른 점 (시연용이라 일부러 단순하게 한 것):
 - 사용자 인증과 토큰을 쓰지 않는다. Authorization 헤더는 없어도, 아무 값이어도 통과한다.
@@ -13,16 +13,22 @@ GET /v2.0/account/balance/fin_num            잔액조회 (우리 앱 화면에�
 """
 
 import re
+import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
+from pathlib import Path
+from urllib.parse import urlencode
 
-from fastapi import APIRouter, Query
+from fastapi import APIRouter, Form, Query
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 
 from app.expenses.mockbank import data
 
 KST = timezone(timedelta(hours=9))  # 한국은 서머타임이 없다. Windows 에서도 tzdata 없이 돈다
 PAGE_SIZE = 25  # 명세: 한 페이지는 최대 25건
 BANK_CODE = "999"  # 가짜 은행 코드
+
+STATIC = Path(__file__).resolve().parents[3] / "static" / "expenses"
 
 router = APIRouter(prefix="/api/expenses/mockbank")
 
@@ -172,15 +178,46 @@ def balance(bank_tran_id: str = "", fintech_use_num: str = "", tran_dtime: str =
     }
 
 
-@router.get("/accounts")
-def accounts():
-    """가짜 은행 전용 계좌 목록. 오픈뱅킹 명세에는 없는 API 다.
 
-    실제 오픈뱅킹에서는 사용자가 은행 인증 화면(OAuth 사용자인증)에서 조회를 허락할 계좌를 고르고,
-    앱은 그 계좌의 핀테크이용번호를 받는다. 참여 폼의 계좌 고르기가 그 단계를 대신한다.
-    주인 이름 · 잔액 · 거래는 내보내지 않는다.
-    """
-    return [
-        {"fintech_use_num": num, "account_alias": account["label"], "bank_name": data.BANK_NAME}
-        for num, account in data.ACCOUNTS.items()
-    ]
+# ---------------------------------------------------------------------------
+# 계좌 연결 (오픈뱅킹 사용자인증을 흉내 낸 것)
+#
+# 실제 오픈뱅킹: 앱이 은행 인증 화면(GET /oauth/2.0/authorize)으로 보낸다 → 사용자가 본인 인증 ·
+# 계좌 선택 · 동의 → 은행이 redirect_uri 로 돌려보낸다 → 앱이 토큰을 받아 핀테크이용번호를 얻는다.
+# 가짜 은행: 인증 · 토큰을 생략하고, 동의 버튼 한 번으로 가상 계좌 A · B · C 중 하나를 연결해
+# redirect_uri 로 핀테크이용번호를 바로 돌려준다. 아무것도 저장하지 않는다.
+# ---------------------------------------------------------------------------
+
+AUTH_PAGE = STATIC / "mockbank_authorize.html"
+
+
+def _safe_redirect(redirect_uri: str) -> bool:
+    """같은 사이트 안의 주소("/r/abc" 같은)만 허용한다. 다른 사이트로 보내는 데 쓰이지 않게."""
+    return redirect_uri.startswith("/") and not redirect_uri.startswith("//") and "\\" not in redirect_uri
+
+
+def _pick_account() -> str:
+    """테스트에서 바꿔 끼울 수 있게 함수로 둔다. 무작위라 서버가 기억할 것이 없다."""
+    return secrets.choice(list(data.ACCOUNTS))
+
+
+@router.get("/oauth/2.0/authorize", include_in_schema=False)
+def authorize_page(redirect_uri: str = "", state: str = ""):
+    """가짜 은행 인증 화면. 참여 폼의 [계좌 연결하기] 버튼이 이 주소로 보낸다."""
+    if not _safe_redirect(redirect_uri):
+        return HTMLResponse("redirect_uri 는 같은 사이트 안의 주소(/로 시작)여야 합니다.", status_code=400)
+    return FileResponse(AUTH_PAGE)
+
+
+@router.post("/oauth/2.0/authorize", include_in_schema=False)
+def authorize_agree(redirect_uri: str = Form(""), state: str = Form("")):
+    """[동의하고 연결]을 누르면 계좌 하나를 연결하고 redirect_uri 로 돌려보낸다."""
+    if not _safe_redirect(redirect_uri):
+        return HTMLResponse("redirect_uri 는 같은 사이트 안의 주소(/로 시작)여야 합니다.", status_code=400)
+    fintech_use_num = _pick_account()
+    query = urlencode({
+        "fintech_use_num": fintech_use_num,
+        "account_alias": data.ACCOUNTS[fintech_use_num]["label"],
+        "state": state,
+    })
+    return RedirectResponse(f"{redirect_uri}{'&' if '?' in redirect_uri else '?'}{query}", status_code=303)

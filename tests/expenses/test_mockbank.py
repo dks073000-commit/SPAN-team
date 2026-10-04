@@ -190,11 +190,33 @@ def test_balance_bad_request():
     assert ask_balance(tran_dtime="2026")["rsp_code"] == "M0003"
 
 
-def test_account_list_for_join_form():
-    res = client.get("/api/expenses/mockbank/accounts")
+
+AUTH_URL = "/api/expenses/mockbank/oauth/2.0/authorize"
+
+
+def test_connect_page_opens():
+    res = client.get(AUTH_URL, params={"redirect_uri": "/r/demo", "state": "xyz"})
     assert res.status_code == 200
-    rows = res.json()
-    assert [r["account_alias"] for r in rows] == ["가상 계좌 A", "가상 계좌 B", "가상 계좌 C"]
-    assert [r["fintech_use_num"] for r in rows] == [A, B, C]
-    for row in rows:
-        assert set(row) == {"fintech_use_num", "account_alias", "bank_name"}  # 주인 이름 · 잔액은 안 나감
+    assert "계좌 연결" in res.text and "시연용 가상 계좌" in res.text
+
+
+def test_connect_returns_account_to_redirect_uri(monkeypatch):
+    monkeypatch.setattr(mockbank, "_pick_account", lambda: B)
+    res = client.post(AUTH_URL, data={"redirect_uri": "/r/demo?step=join", "state": "xyz"}, follow_redirects=False)
+    assert res.status_code == 303
+    assert res.headers["location"] == (
+        "/r/demo?step=join&fintech_use_num=BTG00000000000000000000B"
+        "&account_alias=%EA%B0%80%EC%83%81+%EA%B3%84%EC%A2%8C+B&state=xyz"
+    )
+
+
+def test_connect_picks_one_of_the_virtual_accounts():
+    for _ in range(10):
+        res = client.post(AUTH_URL, data={"redirect_uri": "/r/demo"}, follow_redirects=False)
+        assert any(f"fintech_use_num={num}" in res.headers["location"] for num in (A, B, C))
+
+
+@pytest.mark.parametrize("bad", ["", "https://evil.example", "//evil.example", "/\\evil.example"])
+def test_connect_only_redirects_inside_site(bad):
+    assert client.get(AUTH_URL, params={"redirect_uri": bad}).status_code == 400
+    assert client.post(AUTH_URL, data={"redirect_uri": bad}, follow_redirects=False).status_code == 400
