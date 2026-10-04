@@ -126,3 +126,24 @@ def test_settle_fills_members_with_accounts_and_skips_others(room):
 
 def test_settle_unknown_room():
     assert client.post("/api/expenses/rooms/nope-nope/settle").status_code == 404
+
+
+def test_badge_says_recommended_when_user_puts_auto_excluded_back(room):
+    me_id = room["발표자"]
+    load(me_id)
+    taxi = next(i for i in me(me_id)["items"] if i["merchant"] == "택시" and i["amount"] == 20000)
+    s = patch(me_id, taxi["id"], excluded=False).json()
+    taxi = next(i for i in s["items"] if i["id"] == taxi["id"])
+    assert taxi["badges"] == ["가승인 · 제외 권장"] and taxi["my_share"] == 20000
+
+
+def test_spent_rounds_once_like_the_formula(room):
+    me_id = room["발표자"]
+    db.execute(
+        "insert into expenses (member_id, spent_on, merchant, amount, people, excluded, source) values "
+        "(%s, date '2026-10-03', '모임', 10000, 3, false, 'manual'), (%s, date '2026-10-03', '모임2', 10000, 3, false, 'manual')",
+        (me_id, me_id),
+    )
+    s = me(me_id)
+    assert [i["my_share"] for i in s["items"]] == [3333, 3333]
+    assert s["spent"] == 6667  # 10000/3 + 10000/3 = 6666.67 → 6667 (계산식 그대로 더한 뒤 반올림)

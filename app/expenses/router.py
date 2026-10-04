@@ -81,8 +81,17 @@ def _import(member: dict) -> int:
     return added
 
 
-def _share(amount: int, people: int) -> int:
-    return round(amount / people)
+def _won(value: float) -> int:
+    """원 단위 반올림 (0.5 는 올림). 파이썬 round 는 0.5 를 짝수 쪽으로 보내서 쓰지 않는다."""
+    return int(value + 0.5)
+
+
+def _badge(reason: str | None, excluded: bool) -> str | None:
+    """자동 제외 사유인데 지금 포함돼 있으면 (사용자가 다시 넣었거나, 가승인 취소가 나중에 들어온 경우)
+    "자동 제외"라고 쓰지 않고 제외를 권하는 문구로 보여준다."""
+    if reason and reason.startswith("자동 제외") and not excluded:
+        return reason.removeprefix("자동 제외 · ") + " · 제외 권장"
+    return reason
 
 
 def _summary(member: dict) -> dict:
@@ -102,8 +111,8 @@ def _summary(member: dict) -> dict:
     items = []
     for r in rows:
         badges = []
-        if reasons.get(r["ref"]):
-            badges.append(reasons[r["ref"]])
+        if badge := _badge(reasons.get(r["ref"]), r["excluded"]):
+            badges.append(badge)
         if r["id"] in duplicates:
             badges.append(classify.REASON_DUPLICATE)
         if confirmed_at and r["created_at"] > confirmed_at:
@@ -114,12 +123,13 @@ def _summary(member: dict) -> dict:
             "merchant": r["merchant"],
             "amount": r["amount"],
             "people": r["people"],
-            "my_share": 0 if r["excluded"] else _share(r["amount"], r["people"]),
+            "my_share": 0 if r["excluded"] else _won(r["amount"] / r["people"]),
             "excluded": r["excluded"],
             "badges": badges,
         })
 
-    spent = sum(i["my_share"] for i in items)
+    # 쓴 돈은 계산식 그대로 (내 몫 = amount ÷ people 의 합) 더한 뒤 한 번만 반올림한다. 보드 계산과 맞추려고
+    spent = _won(sum(r["amount"] / r["people"] for r in rows if not r["excluded"]))
     if member["gave_up_at"]:
         status = "항복"
     elif confirmed_at is None or any(r["created_at"] > confirmed_at for r in rows):
