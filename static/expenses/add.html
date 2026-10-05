@@ -3,21 +3,196 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>버티기 · 지출 올리기</title>
+  <title>버티기 · 내 지출</title>
   <link rel="stylesheet" href="/static/common.css">
+  <style>
+    .notice { background: #f3f4f6; border-radius: 8px; padding: 8px 12px; font-size: 13px; color: var(--muted); margin: 0 0 16px; }
+    .hero { text-align: center; padding: 16px 0 8px; }
+    .hero .label { color: var(--muted); font-size: 14px; }
+    .hero .remaining { font-size: 36px; font-weight: 800; margin: 4px 0; }
+    .hero .remaining.over { color: var(--danger); }
+    .hero .sub { color: var(--muted); font-size: 14px; }
+    .status { display: inline-block; margin-top: 8px; padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; }
+    .status.미확인 { background: #fef3c7; color: #92400e; }
+    .status.조정 { background: #dcfce7; color: #166534; }
+    .status.항복 { background: #e5e7eb; color: #374151; }
+    .wide { width: 100%; margin: 12px 0; }
+    .message { text-align: center; font-size: 14px; min-height: 20px; color: var(--accent); }
+    ul.items { list-style: none; padding: 0; margin: 0; }
+    .item { border-bottom: 1px solid var(--line); padding: 10px 0; }
+    .item.off .main { color: var(--muted); text-decoration: line-through; }
+    .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .main { font-weight: 600; }
+    .date { color: var(--muted); font-size: 13px; margin-right: 6px; font-weight: 400; }
+    .controls { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 14px; }
+    .controls select { width: auto; padding: 4px; font-size: 14px; }
+    .controls .share { margin-left: auto; font-weight: 700; white-space: nowrap; }
+    .toggle { width: auto; white-space: nowrap; padding: 4px 10px; font-size: 13px; border-radius: 6px; border: 1px solid var(--line); background: #fff; color: var(--text); }
+    .toggle.on { background: var(--text); color: #fff; border-color: var(--text); }
+    .badge { display: inline-block; font-size: 12px; padding: 1px 6px; border-radius: 4px; background: #eef2ff; color: #3730a3; margin: 4px 4px 0 0; }
+    .badge.warn { background: #fef3c7; color: #92400e; }
+    .giveup { display: block; margin: 32px 0 0 auto; background: #fff; color: var(--muted); border: 1px solid var(--line); font-size: 14px; }
+  </style>
 </head>
 <body>
 <main>
-  <h1>지출 올리기</h1>
-  <p class="muted">지출 레인(이태윤)이 만들 화면입니다. 지금은 이 방에 저장된 지출 건수만 보여 줍니다.</p>
-  <p id="count"></p>
+  <p id="loading" class="muted">불러오는 중...</p>
+
+  <section id="no-member" hidden>
+    <h1>먼저 방에 참여해 주세요</h1>
+    <p class="muted">이 브라우저에는 참여 기록이 없어요.</p>
+    <p><a id="room-link" class="button" href="#">방으로 가기</a></p>
+  </section>
+
+  <section id="page" hidden>
+    <p class="notice">시연용 가상 계좌입니다. 실제 은행·계좌와 연결되지 않습니다.</p>
+    <p class="muted" id="who"></p>
+
+    <div class="hero">
+      <div class="label">목표까지 남은 금액</div>
+      <div class="remaining" id="remaining"></div>
+      <div class="sub" id="sub"></div>
+      <span class="status" id="status"></span>
+    </div>
+
+    <button id="import" class="wide">내역 불러오기</button>
+    <p class="message" id="message"></p>
+
+    <ul class="items" id="items"></ul>
+    <p class="muted" id="empty" hidden>아직 불러온 내역이 없어요. [내역 불러오기]를 눌러 주세요.</p>
+
+    <button id="confirm" class="wide">조정 완료</button>
+    <p class="muted" style="font-size:13px">항목마다 몇 명이서 냈는지, 빼야 할 지출인지 확인하고 눌러 주세요. 결과는 마감일 결과 카드에서 공개돼요.</p>
+
+    <button id="giveup" class="giveup">🏳 항복하기</button>
+  </section>
 </main>
 <script>
   const code = location.pathname.split("/")[2];
-  fetch(`/api/expenses?room_code=${encodeURIComponent(code)}`)
-    .then(r => r.ok ? r.json() : Promise.reject(r.status))
-    .then(rows => { document.getElementById("count").textContent = `저장된 지출 ${rows.length}건`; })
-    .catch(() => { document.getElementById("count").textContent = "불러오지 못했습니다."; });
+  const storageKey = `member_id:${code}`;
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;"}[c]));
+  const won = n => n.toLocaleString("ko-KR") + "원";
+  const md = iso => { const [, m, d] = iso.split("-"); return `${+m}/${+d}`; };
+
+  // 개발 · 시연용: ?member_id=1 로 열면 그 멤버로 들어간다 (참여 폼이 생기기 전 확인용)
+  const fromUrl = new URLSearchParams(location.search).get("member_id");
+  if (fromUrl) { try { localStorage.setItem(storageKey, fromUrl); } catch {} }
+  let memberId = fromUrl;
+  if (!memberId) { try { memberId = localStorage.getItem(storageKey); } catch {} }
+
+  let summary = null;
+  let busy = false;
+
+  async function api(method, url, body) {
+    const res = await fetch(url, {
+      method,
+      headers: body ? {"Content-Type": "application/json"} : {},
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : "요청이 실패했어요");
+    return data;
+  }
+
+  function render(s) {
+    summary = s;
+    const gaveUp = s.status === "항복";
+    $("who").textContent = `${s.room_name} · ${s.nickname}` + (s.account ? ` · ${s.account}` : "");
+    $("remaining").textContent = won(s.remaining);
+    $("remaining").classList.toggle("over", s.remaining < 0);
+    $("sub").textContent = `목표 ${won(s.budget)} · 쓴 돈 ${won(s.spent)}`;
+    $("status").textContent = s.status;
+    $("status").className = "status " + s.status.split(" ")[0];
+
+    $("empty").hidden = s.items.length > 0;
+    $("items").innerHTML = s.items.map(i => {
+      const peopleOptions = Array.from({length: 10}, (_, k) => k + 1)
+        .map(n => `<option value="${n}" ${n === i.people ? "selected" : ""}>${n}명</option>`).join("");
+      const badges = i.badges.map(b => `<span class="badge ${b.startsWith("자동") ? "" : "warn"}">${esc(b)}</span>`).join("");
+      return `
+        <li class="item ${i.excluded ? "off" : ""}" data-id="${i.id}">
+          <div class="row">
+            <span class="main"><span class="date">${md(i.date)}</span>${esc(i.merchant)}</span>
+            <span>${won(i.amount)}</span>
+          </div>
+          <div class="controls">
+            <select data-act="people" ${i.excluded || gaveUp ? "disabled" : ""}>${peopleOptions}</select>
+            <button class="toggle ${i.excluded ? "on" : ""}" data-act="exclude" ${gaveUp ? "disabled" : ""}>${i.excluded ? "제외됨" : "제외"}</button>
+            <span class="share">내 몫 ${won(i.my_share)}</span>
+          </div>
+          ${badges}
+        </li>`;
+    }).join("");
+
+    for (const id of ["import", "confirm", "giveup"]) $(id).disabled = gaveUp;
+    $("confirm").textContent = s.status === "조정 완료" ? "조정 완료 ✓" : "조정 완료";
+  }
+
+  async function run(task) {
+    if (busy) return;
+    busy = true;
+    try { await task(); }
+    catch (e) { $("message").textContent = e.message; }
+    finally { busy = false; }
+  }
+
+  $("import").addEventListener("click", () => run(async () => {
+    $("message").textContent = "은행에서 불러오는 중...";
+    const res = await api("POST", "/api/expenses/import", {member_id: Number(memberId)});
+    render(res.summary);
+    $("message").textContent = res.message;
+  }));
+
+  $("items").addEventListener("change", e => {
+    if (e.target.dataset.act !== "people") return;
+    const id = e.target.closest(".item").dataset.id;
+    run(async () => render(await api("PATCH", `/api/expenses/${id}`, {member_id: Number(memberId), people: Number(e.target.value)})));
+  });
+
+  $("items").addEventListener("click", e => {
+    if (e.target.dataset.act !== "exclude") return;
+    const id = Number(e.target.closest(".item").dataset.id);
+    const current = summary.items.find(i => i.id === id);
+    run(async () => render(await api("PATCH", `/api/expenses/${id}`, {member_id: Number(memberId), excluded: !current.excluded})));
+  });
+
+  $("confirm").addEventListener("click", () => run(async () => {
+    render(await api("POST", "/api/expenses/confirm", {member_id: Number(memberId)}));
+    $("message").textContent = "조정을 마쳤어요. 새 지출이 들어오면 다시 확인해 주세요.";
+  }));
+
+  // 항복: 방 레인의 API 를 부른다 (BUILD_ORDER: POST /api/rooms/{code}/members/{id}/give-up)
+  $("giveup").addEventListener("click", () => {
+    if (!confirm("항복하면 되돌릴 수 없어요. 결과 카드에는 금액 없이 깃발만 보여요. 정말 항복할까요?")) return;
+    run(async () => {
+      try {
+        await api("POST", `/api/rooms/${encodeURIComponent(code)}/members/${encodeURIComponent(memberId)}/give-up`);
+      } catch (e) {
+        throw new Error("항복 기능이 아직 준비되지 않았어요 (" + e.message + ")");
+      }
+      render(await api("GET", `/api/expenses/me?member_id=${encodeURIComponent(memberId)}`));
+      $("message").textContent = "항복했어요. 다음엔 버텨 봐요!";
+    });
+  });
+
+  async function start() {
+    if (!memberId) {
+      $("loading").hidden = true;
+      $("room-link").href = `/r/${encodeURIComponent(code)}`;
+      $("no-member").hidden = false;
+      return;
+    }
+    try {
+      render(await api("GET", `/api/expenses/me?member_id=${encodeURIComponent(memberId)}`));
+    } catch (e) {
+      $("loading").textContent = e.message;
+      return;
+    }
+    $("loading").hidden = true;
+    $("page").hidden = false;
+  }
+  start();
 </script>
 </body>
 </html>

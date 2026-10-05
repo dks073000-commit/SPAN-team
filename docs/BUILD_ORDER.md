@@ -12,7 +12,7 @@
 |---|---|---|---|---|
 | S0 뼈대 | 10/2 | 안정훈 | 폴더 구조, 공용 파일, 테이블, 데모 방, 배포 | 배포 URL에서 빈 화면이 열리고 데모 방 데이터가 DB에서 읽힌다 |
 | S1 개발 | 10/3 ~ 10/4 | 3명 동시 | 방 · 지출(가상 계좌) · 보드 | 아래 "담당과 완료 조건" |
-| 합치기 | 10/5 | 3명 | main에 합치고 전체 흐름 확인 | 방 만들기 → 참여(계좌 선택) → 불러오기 → 조정 완료 → 결과 카드가 배포 URL에서 된다 (1차 개발 완료) |
+| 합치기 | 10/5 | 3명 | main에 합치고 전체 흐름 확인 | 방 만들기 → 참여(은행 연결 → 내 계좌 선택) → 불러오기 → 조정 완료 → 결과 카드가 배포 URL에서 된다 (1차 개발 완료) |
 | 점검 | 10/6 | 3명 | 버그 수정, 시연 시나리오 점검 | 새 방에서 처음부터 끝까지 막힘 없이 된다 (최종 개발 완료) |
 | 발표 준비 | 10/7 | 3명 | 발표자료, 시연 리허설 | 시연 영상(예비)까지 준비 |
 | 발표 | 10/8 | 3명 | 성과 발표 | |
@@ -29,7 +29,7 @@
 
 | 이름 | 레인 | 기능 | 건드리는 폴더 | 브랜치 | 10/5까지 완료 조건 |
 |---|---|---|---|---|---|
-| 안정훈 | 방 + 뼈대(공용) | 방 만들기, 링크로 들어와 참여, 항복 | `app/rooms/` `static/rooms/` `tests/rooms/`, 공용 파일 | `feat/s0-ahn` → `feat/s1-room-ahn` | 방을 만들면 링크가 생기고, 링크로 들어와 닉네임 · 예산 · 가짜 은행 계좌를 고르면 참여된다. 항복 API가 있다 |
+| 안정훈 | 방 + 뼈대(공용) | 방 만들기, 링크로 들어와 참여, 항복 | `app/rooms/` `static/rooms/` `tests/rooms/`, 공용 파일 | `feat/s0-ahn` → `feat/s1-room-ahn` | 방을 만들면 링크가 생기고, 링크로 들어와 닉네임 · 예산 · 숫자 4자리를 넣고 은행 연결 → 내 계좌 선택(가짜 은행 화면 안)을 마치면 참여된다. 항복 API가 있다 |
 | 이태윤 | 지출 (가짜 은행) | 본인 페이지: 불러오기, 조정, 남은 금액, 항복 버튼 | `app/expenses/` `static/expenses/` `tests/expenses/` | `feat/s1-expense-lee` | 참여 때 고른 계좌의 거래내역을 불러와 확인 화면에 표시 → 몇 명이서·제외 선택 → 조정 완료(`confirmed_at`) → 목표까지 남은 금액 표시. 마감 자동 반영 API |
 | 김경은 | 보드 (결과 카드) | 마감일 결과 카드, 공용 UI | `app/board/` `static/board/` `tests/board/` | `feat/s1-board-kim` | 결과 카드에 순위(금 · 은 · 동), 초과, 미확인, 항복 깃발이 보이고, 다른 사람은 총액만 보인다. 시연용 미리보기 옵션 |
 
@@ -67,19 +67,21 @@ API는 레인 이름으로 시작한다: `/api/rooms/...` `/api/expenses/...` `/
 
 | 주소 | 하는 일 | 누가 쓰나 |
 |---|---|---|
-| `GET /api/expenses/mockbank/v2.0/account/list` 🟡 | 등록계좌조회: 고를 수 있는 가짜 은행 계좌 목록 (`fintech_use_num`, `account_alias`) | 방 레인 (참여 폼) |
+| `GET/POST /api/expenses/mockbank/oauth/2.0/authorize` | 계좌 연결(시뮬레이션): 동의 → 내 계좌 선택, 참여 필수. `redirect_uri`(같은 사이트 주소)와 `state`를 받아, 고르면 `?fintech_use_num=...&account_alias=...&state=...`로 돌려보낸다 | 방 레인 (참여 폼의 [은행 연결하기]) |
 | `GET /api/expenses/mockbank/v2.0/account/transaction_list/fin_num` | 거래내역조회 | 지출 레인 |
 | `GET /api/expenses/mockbank/v2.0/account/balance/fin_num` | 잔액조회 (화면에는 쓰지 않음) | |
 | `POST /api/expenses` 🟡 | 확인 화면에서 고른 항목을 저장한다 | 지출 레인 |
 | 마감 자동 반영 🟡 (이름은 이태윤이 정한다) | 아직 안 불러온 멤버의 내역을 채운다 | 보드 레인 (결과 카드 열기 전) |
-| `POST /api/rooms/{code}/members/{id}/give-up` 🟡 | 항복. `gave_up_at`을 기록한다 | 지출 레인 (본인 페이지의 항복 버튼) |
+| `POST /api/rooms/{code}/members` | 참여. 닉네임 · 예산 · 숫자 4자리(`pin`)를 받는다 | 방 레인 (방 홈) |
+| `POST /api/rooms/{code}/members/{id}/rejoin` | 다시 들어오기. `{ "pin": "1234" }` → 맞으면 멤버(`id`)를 돌려준다. 틀리면 401 | 방 레인 (방 홈에서 이름 누르기) |
+| `POST /api/rooms/{code}/members/{id}/give-up` | 항복. `gave_up_at`을 기록한다 | 지출 레인 (본인 페이지의 항복 버튼) |
 
 ### 테이블
 
 | 테이블 | 칸 | 쓰는 레인 |
 |---|---|---|
 | `rooms` | code, name, start_date, end_date, upload_cycle, deadline_weekday | 방 |
-| `members` | id, room_code, nickname, budget, fintech_use_num, confirmed_at, gave_up_at | 방 (`confirmed_at`은 지출 레인이 쓴다) |
+| `members` | id, room_code, nickname, budget, fintech_use_num, confirmed_at, gave_up_at, pin_hash | 방 (`confirmed_at`은 지출 레인이 쓴다) |
 | `expenses` | id, member_id, spent_on, merchant, amount, people, excluded, source, ref, category | 지출 |
 
 - 보드 레인은 세 테이블을 읽기만 한다.
@@ -89,11 +91,13 @@ API는 레인 이름으로 시작한다: `/api/rooms/...` `/api/expenses/...` `/
 - `ref` 🟡 는 가상 거래의 고유 번호다. 같은 멤버가 같은 `ref`를 두 번 저장하지 못하게 해서 중복 저장을 막는다. 직접 입력은 비워 둔다.
 - `category`는 비워 둔다. 카테고리화는 10/8 이후다.
 - 로그인이 없으므로 "나"는 브라우저에 저장한 멤버 id로 구분한다. 저장 이름은 `member_id:{code}`다.
+- `pin_hash` (10/4): 다른 브라우저(카톡 ↔ 크롬)에서 링크를 열면 저장값이 없어서, 방 홈에서 내 이름을 누르고 참여 때 정한 숫자 4자리를 넣어 다시 들어온다. 4자리는 해시로만 저장하고(`app/rooms/pin.py`) 방 레인만 읽는다. 데모 방 멤버는 `pin_hash`가 비어 있어 다시 들어오기를 할 수 없다.
+- 이 4자리는 "내 방으로 돌아오기"만 해결한다. 지출 API가 아직 member_id만 보고 상세 내역을 주므로, 남이 내 상세 내역을 보는 것까지 막으려면 지출 API가 확인할 값이 따로 필요하다 (발표 뒤).
 
 ### 가상 계좌 데이터
 
 - 파일 위치: `app/expenses/mockbank/` (지출 레인이 관리한다. DB 테이블이 아니다)
-- 가상 계좌는 3개(A · B · C)다. 멤버마다 다른 계좌를 고를 수 있어야 결과에서 차이가 난다.
+- 가상 계좌는 발표자(가상 주인 이예시)의 2개다: A 입출금통장(시연 거래가 모두 여기 있다, 데모 방 seed가 연결) · S 자유적금(출금 없음). 다른 참여자는 데모 방 seed의 목표 예산과 총액만 쓴다.
 - 날짜는 시연 주(10/2 ~ 10/8)로 고정한다 (10/3). "며칠째"로 적고 `START_DATE`(기본 2026-10-02, 환경변수 `MOCKBANK_START_DATE`)에 더한다. 오늘 이후 거래는 돌려주지 않는다. 데모 방도 같은 기간이다.
 - 거래마다 넣을 것: 고유 번호, 며칠째, 상호, 금액, 입금/출금, 종류(일반 · 가승인 · 충전 · 내 계좌 이체).
 
