@@ -16,3 +16,6 @@
 .member { display: flex; justify-content: space-between; }
 .me { font-weight: 600; }
 .todo { border: 1px dashed var(--line); border-radius: 8px; padding: 8px 12px; }
+
+/* 다시 들어오기: 멤버 이름을 누를 수 있는 글자 버튼 */
+button.link { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }

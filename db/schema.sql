@@ -30,6 +30,9 @@ alter table members add column if not exists fintech_use_num text;        -- 참
 alter table members add column if not exists confirmed_at    timestamptz; -- 항목 조정(1/N · 제외)을 마친 시각. null = 미확인
 alter table members add column if not exists gave_up_at      timestamptz; -- 항복한 시각. null = 진행 중. 먼저 포기한 사람이 맨 아래
 
+-- 10/4: 다른 브라우저에서 링크를 열어도 닉네임 + 숫자 4자리로 다시 들어온다 (로그인 아님, 방 안에서만)
+alter table members add column if not exists pin_hash text;  -- 4자리의 해시 (app/rooms/pin.py). null = 다시 들어오기 불가 (데모 멤버)
+
 create table if not exists expenses (
     id         bigint generated always as identity primary key,
     member_id  bigint not null references members(id) on delete cascade,
