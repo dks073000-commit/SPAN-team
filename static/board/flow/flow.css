@@ -281,3 +281,27 @@ body.has-tabbar .counter { padding-bottom: calc(96px + env(safe-area-inset-botto
   border-radius: 14px;
 }
 .pin-form .danger { text-align: center; }
+
+/* ── 10/6 에이전트4: 시연 막대 ── */
+/* ⋯ 대신 '설정' 글자 버튼 (무엇을 여는지 바로 보이게), 시트 이름은 '발표 설정' */
+.db-set { font-size: 13px; padding: 0 12px; color: #fff; }
+/* '결과 날로 보기' 켜고 끄기: 화살표 대신 스위치 */
+.ds-toggle { padding-right: 62px; }
+.ds-toggle::after { content: none; }
+.ds-switch {
+  position: absolute; right: 4px; top: 50%; translate: 0 -50%;
+  width: 44px; height: 26px; border-radius: 999px; background: #dcdce2;
+  transition: background 0.15s ease;
+}
+.ds-switch::before {
+  content: ""; position: absolute; left: 3px; top: 3px; width: 20px; height: 20px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 3px rgba(28, 28, 33, 0.25); transition: translate 0.15s ease;
+}
+.ds-toggle[aria-checked="true"] .ds-switch { background: var(--ink, #1c1c21); }
+.ds-toggle[aria-checked="true"] .ds-switch::before { translate: 18px 0; }
+@media (prefers-reduced-motion: reduce) { .ds-switch, .ds-switch::before { transition: none; } }
+/* 360px: 날짜 표시까지 붙어도 한 줄에 들어가게 */
+@media (max-width: 380px) {
+  .db-seg button { padding: 0 9px; }
+  .db-set { padding: 0 9px; }
+}

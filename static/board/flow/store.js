@@ -24,7 +24,7 @@ window.Flow = (function () {
   const won = (n) => Math.abs(Math.round(n)).toLocaleString("ko-KR");
   const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-  const TODAY_KEY = "flow:today";   // 시연 도구 막대의 "날짜 바꿔 보기"
+  const TODAY_KEY = "flow:today";   // 발표 설정의 "결과 날로 보기"
   function now() {
     const forced = get(TODAY_KEY);
     if (forced) { const d = parse(forced); d.setHours(23, 59, 0, 0); return d; }
@@ -133,9 +133,38 @@ window.Flow = (function () {
   function load(code) {
     const state = get(roomKey(code));
     if (state) return state;
-    return code === "demo" ? seedDemo() : null;
+    return code === "demo" ? seedDemo() : fromLink(code);
   }
   const save = (state) => put(roomKey(state.room.code), state);
+
+  /* ---------- 방 링크: 다른 기기에서도 방이 열리게 이름 · 기간을 링크에 담는다 (10/6 피드백 1) ---------- */
+  // 형식: /flow/r/{code}?n=방이름&s=2026-10-06&e=2026-10-12
+  // 가짜 서버는 브라우저마다 따로라, 링크만 받은 기기는 이 값으로 빈 방(참여자 0명)을 만든다.
+  // 참여 기록은 각자 기기에만 남는다 (실제 서비스는 서버가 방을 알고 있으니 code 만 있으면 된다).
+  const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+  const realDate = (s) => DATE_RE.test(s) && ymd(parse(s)) === s;
+
+  function roomLink(code) {
+    const enc = encodeURIComponent(code);
+    const state = get(roomKey(code));
+    const base = `${location.origin}/flow/r/${enc}`;
+    if (!state || code === "demo") return base;
+    const { name, start_date, end_date } = state.room;
+    return `${base}?n=${encodeURIComponent(name)}&s=${start_date}&e=${end_date}`;
+  }
+
+  function fromLink(code) {
+    if (typeof location === "undefined") return null;
+    const q = new URLSearchParams(location.search);
+    const name = (q.get("n") || "").trim().slice(0, 30);
+    const start_date = q.get("s") || "";
+    const end_date = q.get("e") || "";
+    if (!name || !realDate(start_date) || !realDate(end_date) || end_date < start_date) return null;
+    if (!/^[a-z0-9]{1,12}$/.test(code)) return null;
+    const state = { room: { code, name, start_date, end_date }, next_id: 1, members: [], expenses: [] };
+    save(state);
+    return state;
+  }
 
   function createRoom({ name, start_date, end_date }) {
     let code;
@@ -152,7 +181,7 @@ window.Flow = (function () {
     for (const ch of `${code}:${pin}`) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619) >>> 0; }
     return h.toString(16);
   };
-  const DEMO_PIN = "1234";   // 데모방 · 가상 참여자의 4자리 (시연 도구 시트에 적어 둔다)
+  const DEMO_PIN = "1234";   // 데모방 · 가상 참여자의 4자리 (발표 설정 시트에 적어 둔다)
   const MAX_TRIES = 5;
   const LOCK_MS = 30000;
 
@@ -317,7 +346,7 @@ window.Flow = (function () {
     return `<span class="token ${pc}${extra ? " " + extra : ""}" aria-hidden="true">${esc(Array.from(String(nickname || "?"))[0])}</span>`;
   }
 
-  /* ---------- 시연 막대: 영수증 위 "참여자 시점 | 개발자 시점" + ⋯ 도구 (10/3 회의: 버튼 두 개) ---------- */
+  /* ---------- 시연 막대: 영수증 위 "참여자 시점 | 개발자 시점" + 설정 (10/3 회의: 버튼 두 개, 10/6 ⋯ → 설정) ---------- */
   // 서비스 화면(영수증)과 다른 질감의 어두운 막대라 보는 사람이 "시연 조작"인 걸 알 수 있다.
   //   참여자 시점: 데모방에 계좌 A 로 참여한 발표자가 되어 내 페이지부터 (불러오기 → 1/N · 제외 → 조정 완료 → 결과 카드)
   //   개발자 시점: 방 만들기부터 기능을 차례로 (링크 → 닉네임 → 은행 연결 → 내 페이지 → 가상 참여자 · 마감 → 결과 카드)
@@ -347,7 +376,6 @@ window.Flow = (function () {
     const enc = code ? encodeURIComponent(code) : "";
     const state = code ? load(code) : null;
     const endDay = state ? state.room.end_date : DEMO_DAY;
-    const realToday = md(ymd(new Date()));
 
     const bar = document.createElement("div");
     bar.className = "demo-bar";
@@ -357,11 +385,14 @@ window.Flow = (function () {
         <button type="button" data-act="participant" aria-pressed="${mode === "participant"}">참여자 시점</button>
         <button type="button" data-act="developer" aria-pressed="${mode === "developer"}">개발자 시점</button>
       </span>
-      <button type="button" class="db-more" data-act="open" aria-haspopup="dialog" aria-label="시연 도구 열기${forced ? `, 지금 ${md(forced)} 로 보는 중` : ""}">${forced ? `<span class="db-day">${md(forced).replace(/\(.\)/, "")}</span>` : ""}<span aria-hidden="true">⋯</span></button>`;
+      <button type="button" class="db-more db-set" data-act="open" aria-haspopup="dialog" aria-label="발표 설정 열기${forced ? `, 지금 ${md(forced)} 로 보는 중` : ""}">${forced ? `<span class="db-day">${md(forced).replace(/\(.\)/, "")}</span>` : ""}<span>설정</span></button>`;
 
-    const row = (act, title, desc, href) => href
-      ? `<a class="ds-row" href="${href}"><b>${title}</b><span>${desc}</span></a>`
-      : `<button type="button" class="ds-row" data-act="${act}"><b>${title}</b><span>${desc}</span></button>`;
+    const row = (act, title, desc, href) => {
+      const sub = desc ? `<span>${desc}</span>` : "";
+      return href
+        ? `<a class="ds-row" href="${href}"><b>${title}</b>${sub}</a>`
+        : `<button type="button" class="ds-row" data-act="${act}"><b>${title}</b>${sub}</button>`;
+    };
     const hasDummies = state && ["짠돌이", "카페중독", "큰손", "포기각"].every((n) => state.members.some((m) => m.nickname === n));
 
     const sheet = document.createElement("div");
@@ -371,20 +402,17 @@ window.Flow = (function () {
       <div class="ds-backdrop" data-act="close"></div>
       <section class="ds-panel" role="dialog" aria-modal="true" aria-labelledby="ds-title">
         <span class="ds-handle" aria-hidden="true"></span>
-        <h2 id="ds-title">시연 도구</h2>
-        <p class="ds-sub">발표할 때만 쓰는 버튼이에요. 실제 서비스에는 없어요.</p>
-        <p class="ds-label">오늘 날짜</p>
-        <div class="ds-seg" role="radiogroup" aria-label="오늘 날짜">
-          <button type="button" role="radio" aria-checked="${!forced}" data-act="day-real">진짜 오늘 <small>${realToday}</small></button>
-          <button type="button" role="radio" aria-checked="${Boolean(forced)}" data-act="day-end">마감일 <small>${md(endDay)}</small></button>
-        </div>
-        <p class="ds-hint">마감일로 두면 결과 카드가 열려요.</p>
+        <h2 id="ds-title">발표 설정</h2>
+        <p class="ds-sub">발표할 때만 써요. 실제 서비스에는 없어요.</p>
         <div class="ds-list">
-          ${code ? row("", "결과 카드 보기", "마감 전이어도 지금 기록으로 결과를 봐요", `/flow/r/${enc}/board?preview=1`) : ""}
-          ${code && code !== "demo" && !hasDummies ? row("fill", "가상 참여자 채우기", "짠돌이 · 카페중독 · 큰손 · 포기각을 이 방에 넣어요") : ""}
-          ${code === "demo" ? "" : row("", "발표용 데모 방 열기", "발표자 · 짠돌이 · 카페중독 · 큰손 · 포기각이 있는 방", "/flow/r/demo")}
-          ${code && get(meKey(code)) != null ? row("forget", "다른 기기처럼 다시 들어오기", `이 브라우저의 내 자리 기억만 지워요. 데모 참여자 4자리는 ${DEMO_PIN}`) : ""}
-          ${code ? row("reset", "이 방 처음부터 다시", "참여 · 은행 연결 · 불러온 기록을 지워요") : ""}
+          <button type="button" class="ds-row ds-toggle" role="switch" aria-checked="${Boolean(forced)}" data-act="${forced ? "day-real" : "day-end"}">
+            <b>결과 날로 보기</b><span>${forced ? `${md(forced)} 로 보는 중이에요. 끄면 진짜 오늘로` : `오늘을 마감일 ${md(endDay)} 로 바꿔요`}</span>
+            <i class="ds-switch" aria-hidden="true"></i>
+          </button>
+          ${code ? row("", "지금 결과 보기", "마감 전이어도 지금 기록으로", `/flow/r/${enc}/board?preview=1`) : ""}
+          ${code && code !== "demo" && !hasDummies ? row("fill", "가상 친구 4명 넣기", "짠돌이 · 카페중독 · 큰손 · 포기각") : ""}
+          ${code && get(meKey(code)) != null ? row("forget", "다른 폰에서 들어온 것처럼", `데모 4자리는 ${DEMO_PIN}`) : ""}
+          ${row("reset", "처음부터 다시", code ? "참여 · 은행 연결 · 기록을 지워요" : "은행 연결 · 날짜를 처음으로")}
         </div>
         <button type="button" class="ds-close" data-act="close">닫기</button>
       </section>`;
@@ -405,6 +433,7 @@ window.Flow = (function () {
       if (act === "forget") { forgetMe(code); location.href = `/flow/r/${enc}`; }
       if (act === "reset") {
         if (code === "demo" && mode === "participant") { startParticipant(); return; }
+        if (!code) { drop(TODAY_KEY); drop(BANK_KEY); location.reload(); return; }
         reset(code); location.href = code === "demo" ? "/flow/r/demo" : "/flow";
       }
     };
@@ -444,6 +473,6 @@ window.Flow = (function () {
   return {
     ACCOUNTS, BANK_NAME, md, won, esc, today, addDays, parse, token, accountName, daysLeft, bankLinked, linkBank,
     load, createRoom, join, myId, member, reset, claim, tabbar,
-    importTx, updateItem, confirm, giveUp, totals, roomInfo, board, share, toolbar,
+    importTx, updateItem, confirm, giveUp, totals, roomInfo, board, share, toolbar, roomLink,
   };
 })();
