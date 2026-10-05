@@ -162,7 +162,7 @@
       ${head(room)}
       <hr class="r-cut">
       <section class="r-seal r-reveal" style="--i:1" aria-label="결과 공개까지 남은 날">
-        <p class="seal-d"><span class="num n">${dday}</span><span class="stamp stamp-lg stamp-gray">봉인</span></p>
+        <p class="seal-d"><span class="num n">${dday}</span></p>
         <p class="seal-lead">${lead}</p>
       </section>
       <hr class="r-cut">
