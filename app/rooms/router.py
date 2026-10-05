@@ -9,6 +9,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, field_validator
 
 from app.db import connect, fetch_all, fetch_one
+from app.rooms.pin import check_pin, hash_pin
 
 STATIC = Path(__file__).resolve().parents[2] / "static" / "rooms"
 
@@ -81,16 +82,21 @@ def get_room(code: str):
     )
     if room is None:
         raise HTTPException(404, "없는 방입니다")
+    # has_pin: 이름을 눌러 4자리로 다시 들어올 수 있는지. 해시는 내보내지 않는다
     room["members"] = fetch_all(
-        "select id, nickname, budget from members where room_code = %s order by id",
+        "select id, nickname, budget, pin_hash is not null as has_pin from members where room_code = %s order by id",
         (code,),
     )
     return room
 
 
+PIN = Field(pattern=r"^[0-9]{4}$")                         # 숫자 4자리 (다시 들어오기용)
+
+
 class MemberIn(BaseModel):
     nickname: str = Field(min_length=1, max_length=20)
     budget: int = Field(gt=0, le=100_000_000)                # 원
+    pin: str = PIN
 
     @field_validator("nickname")
     @classmethod
@@ -103,7 +109,7 @@ class MemberIn(BaseModel):
 
 @router.post("/api/rooms/{code}/members", status_code=201)
 def join_room(code: str, member: MemberIn):
-    """닉네임과 예산으로 참여한다. 돌려준 id 를 브라우저가 member_id:{code} 로 저장한다."""
+    """닉네임 · 예산 · 숫자 4자리로 참여한다. 돌려준 id 를 브라우저가 member_id:{code} 로 저장한다."""
     with connect() as conn:
         if conn.execute("select 1 from rooms where code = %s", (code,)).fetchone() is None:
             raise HTTPException(404, "없는 방입니다")
@@ -113,6 +119,32 @@ def join_room(code: str, member: MemberIn):
         if taken:
             raise HTTPException(409, "이미 있는 닉네임입니다")
         return conn.execute(
-            "insert into members (room_code, nickname, budget) values (%s, %s, %s) returning id, nickname, budget",
-            (code, member.nickname, member.budget),
+            """
+            insert into members (room_code, nickname, budget, pin_hash) values (%s, %s, %s, %s)
+            returning id, nickname, budget
+            """,
+            (code, member.nickname, member.budget, hash_pin(member.pin)),
         ).fetchone()
+
+
+class RejoinIn(BaseModel):
+    pin: str = PIN
+
+
+@router.post("/api/rooms/{code}/members/{member_id}/rejoin")
+def rejoin_room(code: str, member_id: int, body: RejoinIn):
+    """다른 브라우저에서 다시 들어오기: 방 홈에서 내 이름을 누르고 4자리를 넣는다.
+
+    맞으면 멤버를 돌려주고 브라우저가 member_id:{code} 로 저장한다 (참여와 같다).
+    """
+    m = fetch_one(
+        "select id, nickname, budget, pin_hash from members where room_code = %s and id = %s",
+        (code, member_id),
+    )
+    if m is None:
+        raise HTTPException(404, "이 방에 없는 멤버입니다")
+    if m["pin_hash"] is None:
+        raise HTTPException(403, "4자리를 정하지 않은 멤버라 다시 들어올 수 없습니다")
+    if not check_pin(body.pin, m["pin_hash"]):
+        raise HTTPException(401, "4자리가 맞지 않아요")
+    return {"id": m["id"], "nickname": m["nickname"], "budget": m["budget"]}

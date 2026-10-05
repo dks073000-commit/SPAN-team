@@ -1,0 +1,386 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>이름·로고 투표</title>
+  <link rel="stylesheet" href="/static/board/common-proposal.css">
+  <style>
+    .vote-head { max-width: 980px; margin: 0 auto 8px; padding: 0 4px; }
+    .vote-head h1 { margin-bottom: 4px; }
+    .vote-head p { color: var(--ink-soft); font-size: 15px; margin: 0; }
+
+    .options { max-width: 1320px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px 24px; align-items: start; }
+    .options .paper { width: 100%; max-width: 460px; margin: 7px auto; display: grid; gap: 0; }
+
+    .opt-label { display: flex; align-items: baseline; gap: 10px; margin: 0; }
+    .opt-label .letter { font-family: var(--mono); font-weight: 700; font-size: 14px; background: var(--ink); color: var(--paper); border-radius: 4px; padding: 1px 7px; }
+    .opt-label .name { font-weight: 700; font-size: 15px; }
+
+    .hero-logo { display: grid; place-items: center; min-height: 190px; padding: 18px 0 6px; }
+    .hero-logo svg { width: 100%; height: auto; overflow: visible; }
+
+    .ctx-title { font-size: 13px; color: var(--ink-soft); margin: 0 0 10px; }
+
+    /* 영수증 머리 안에 넣었을 때 */
+    .mini-receipt { background: var(--counter); border-radius: 10px; padding: 16px 14px; }
+    .mini-receipt .sheet { background: var(--paper); padding: 16px 14px 14px; text-align: center; display: grid; gap: 4px; justify-items: center; }
+    .mini-receipt .room { font-weight: 700; font-size: 16px; margin: 6px 0 0; }
+    .mini-receipt .meta { font-size: 12.5px; color: var(--ink-soft); margin: 0; }
+    .mini-receipt .rank { font-weight: 900; font-size: 30px; line-height: 1; margin: 10px 0 0; }
+
+    /* 작은 아이콘 (카톡 프로필, 브라우저 탭) */
+    .icons { display: flex; align-items: flex-end; gap: 18px; }
+    .icons figure { margin: 0; display: grid; justify-items: center; gap: 6px; }
+    .icons figcaption { font-size: 11.5px; color: var(--ink-soft); font-family: var(--mono); }
+    .app-icon { display: grid; place-items: center; background: var(--paper); border: 1px solid rgba(28, 28, 33, 0.12); }
+    .app-icon.r { border-radius: 22%; }
+    .app-icon.c { border-radius: 50%; }
+
+    .why { font-size: 14px; color: var(--ink-soft); margin: 0; line-height: 1.65; }
+    .why b { color: var(--ink); }
+
+    .vote-foot { max-width: 980px; margin: 32px auto 0; text-align: center; color: var(--ink-soft); font-size: 14px; }
+
+    .wm { font-family: var(--font); font-weight: 900; fill: var(--ink); }
+    .wm-sub { font-family: var(--font); font-weight: 700; fill: var(--ink); letter-spacing: 0.24em; }
+
+    /* D안: 흑백 컴퓨터 창. 글꼴은 갈무리(SIL OFL) */
+    @font-face { font-family: "Galmuri11"; font-weight: 700; font-display: swap; src: url("https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/Galmuri11-Bold.woff2") format("woff2"); }
+    @font-face { font-family: "Galmuri11"; font-weight: 400; font-display: swap; src: url("https://cdn.jsdelivr.net/npm/galmuri@2.40.3/dist/Galmuri11.woff2") format("woff2"); }
+    .win { --dither: repeating-conic-gradient(var(--ink) 0 25%, transparent 0 50%) 0 0 / 4px 4px; position: relative; border: 2px solid var(--ink); background: #fff; font-family: "Galmuri11", var(--font); text-align: left; color: var(--ink); }
+    .win::after { content: ""; position: absolute; inset: 5px -7px -7px 5px; z-index: -1; background: var(--dither); }
+    .win-title { display: flex; align-items: center; gap: 6px; margin: 0; padding: 3px 6px; background: var(--ink); color: #fff; font-size: 12px; font-weight: 700; line-height: 1.2; }
+    .win-title i { width: 10px; height: 10px; border: 2px solid #fff; flex: none; }
+    .win-title span { flex: 1; text-align: center; padding-right: 16px; }
+    .win-body { display: flex; align-items: center; gap: 10px; padding: 8px 10px 9px; }
+    .win-state { flex: 1; min-width: 0; }
+    .win-state p { margin: 0 0 5px; font-size: 12px; line-height: 1.2; white-space: nowrap; }
+    .hero-logo, .mini-receipt .sheet { isolation: isolate; }
+    .hero-logo .win svg { width: 55px; height: 55px; }
+    .win svg { flex: none; }
+    .win-bar { height: 14px; border: 2px solid var(--ink); padding: 1px; }
+    .win-bar span { display: block; height: 100%; background: var(--dither); }
+    .win.big { width: min(100%, 300px); }
+    .win.big .win-title { font-size: 15px; padding: 5px 8px; }
+    .win.big .win-title i { width: 13px; height: 13px; }
+    .win.big .win-title span { padding-right: 21px; }
+    .win.big .win-body { padding: 16px 14px 10px; gap: 14px; }
+    .win.big .win-state p { font-size: 15px; margin-bottom: 8px; }
+    .win.big .win-bar { height: 20px; }
+    .win-btns { display: flex; justify-content: flex-end; padding: 0 14px 14px; }
+    .win-btn { font: 700 14px "Galmuri11", var(--font); padding: 6px 14px; border: 2px solid var(--ink); border-radius: 8px; outline: 2px solid var(--ink); outline-offset: 2px; background: #fff; color: var(--ink); }
+    .win.mini { width: 100%; max-width: 236px; margin-bottom: 8px; }
+    .icon-win { display: grid; grid-template-rows: 14px 1fr; width: 72px; height: 72px; border: 2px solid var(--ink); background: #fff; border-radius: 6px; overflow: hidden; }
+    .icon-win b { background: var(--ink); }
+    .icon-win svg { place-self: center; }
+  </style>
+</head>
+<body>
+
+<!-- 두 안이 같이 쓰는 그림 조각 -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <!-- A안 마크: 위쪽이 영수증 톱니인 방패, 안에서 ₩의 가로줄이 바리케이드가 된다 -->
+    <symbol id="shield" viewBox="0 0 60 68">
+      <path d="M6 9 L9 4 L12 9 L15 4 L18 9 L21 4 L24 9 L27 4 L30 9 L33 4 L36 9 L39 4 L42 9 L45 4 L48 9 L51 4 L54 9 V31 C54 46 44 57 30 64 C16 57 6 46 6 31 Z"
+            fill="#ffffff" stroke="#1c1c21" stroke-width="3.2" stroke-linejoin="round"/>
+      <rect x="10" y="28" width="40" height="10" fill="#e4ff4a"/>
+      <polyline points="17,19 23.5,45 30,26 36.5,45 43,19" fill="none" stroke="#1c1c21" stroke-width="4.2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="10.5" y1="29.5" x2="49.5" y2="29.5" stroke="#1c1c21" stroke-width="3.4" stroke-linecap="round"/>
+      <line x1="10.5" y1="36.5" x2="49.5" y2="36.5" stroke="#1c1c21" stroke-width="3.4" stroke-linecap="round"/>
+    </symbol>
+
+    <!-- B안: 찍힌 도장처럼 잉크가 조금씩 빠지는 질감 -->
+    <filter id="ink" x="-5%" y="-5%" width="110%" height="110%">
+      <feTurbulence type="fractalNoise" baseFrequency="1.1" numOctaves="2" seed="7" result="noise"/>
+      <feColorMatrix in="noise" type="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 -1.3 1.38" result="mask"/>
+      <feComposite in="SourceGraphic" in2="mask" operator="in"/>
+    </filter>
+
+    <!-- C안: 감열 프린터가 칸 단위로 찍은 방패 (11×11 칸). ₩ 의 가로줄이 바리케이드 -->
+    <symbol id="pixel-shield" viewBox="0 0 11 11" shape-rendering="crispEdges">
+      <g fill="#1c1c21">
+        <rect x="0" y="0" width="11" height="1"/>
+        <rect x="0" y="1" width="1" height="6"/><rect x="10" y="1" width="1" height="6"/>
+        <rect x="1" y="7" width="1" height="1"/><rect x="9" y="7" width="1" height="1"/>
+        <rect x="2" y="8" width="1" height="1"/><rect x="8" y="8" width="1" height="1"/>
+        <rect x="3" y="9" width="1" height="1"/><rect x="7" y="9" width="1" height="1"/>
+        <rect x="4" y="10" width="3" height="1"/>
+        <rect x="2" y="2" width="1" height="2"/><rect x="8" y="2" width="1" height="2"/>
+        <rect x="5" y="3" width="1" height="1"/>
+        <rect x="3" y="5" width="1" height="1"/><rect x="5" y="5" width="1" height="1"/><rect x="7" y="5" width="1" height="1"/>
+        <rect x="4" y="6" width="1" height="1"/><rect x="6" y="6" width="1" height="1"/>
+      </g>
+      <rect x="1" y="4" width="9" height="1" fill="#c8e600"/>
+    </symbol>
+    <symbol id="pixel-shield-mono" viewBox="0 0 11 11" shape-rendering="crispEdges">
+      <g fill="#1c1c21">
+        <rect x="0" y="0" width="11" height="1"/>
+        <rect x="0" y="1" width="1" height="6"/><rect x="10" y="1" width="1" height="6"/>
+        <rect x="1" y="7" width="1" height="1"/><rect x="9" y="7" width="1" height="1"/>
+        <rect x="2" y="8" width="1" height="1"/><rect x="8" y="8" width="1" height="1"/>
+        <rect x="3" y="9" width="1" height="1"/><rect x="7" y="9" width="1" height="1"/>
+        <rect x="4" y="10" width="3" height="1"/>
+        <rect x="2" y="2" width="1" height="2"/><rect x="8" y="2" width="1" height="2"/>
+        <rect x="5" y="3" width="1" height="1"/>
+        <rect x="3" y="5" width="1" height="1"/><rect x="5" y="5" width="1" height="1"/><rect x="7" y="5" width="1" height="1"/>
+        <rect x="4" y="6" width="1" height="1"/><rect x="6" y="6" width="1" height="1"/>
+      </g>
+      <rect x="1" y="4" width="9" height="1" fill="#1c1c21"/>
+    </symbol>
+    <!-- 점으로 찍힌 글자: 흰 점 무늬를 마스크로 써서 글자가 점으로만 보이게 -->
+    <pattern id="thermal-dots" width="5" height="5" patternUnits="userSpaceOnUse">
+      <circle cx="2.5" cy="2.5" r="2.15" fill="#fff"/>
+    </pattern>
+    <mask id="thermal-mask" maskUnits="userSpaceOnUse" x="0" y="0" width="400" height="400">
+      <rect width="400" height="400" fill="url(#thermal-dots)"/>
+    </mask>
+  </defs>
+</svg>
+
+<header class="vote-head">
+  <h1>이름·로고 투표</h1>
+  <p>네 안을 같은 자리에 넣어 봤어요. 큰 로고, 영수증 머리, 작은 아이콘 순서예요. 이름(텅장 / 통장)과 로고 모양은 따로 골라도 돼요.</p>
+</header>
+
+<div class="options">
+
+  <!-- A안 -->
+  <section class="paper" aria-labelledby="a-name">
+    <p class="opt-label"><span class="letter">A</span><span class="name" id="a-name">텅장방어전</span></p>
+
+    <div class="hero-logo">
+      <svg viewBox="0 0 330 112" role="img" aria-label="텅장방어전 로고: 영수증 방패 안의 원화 표시">
+        <use href="#shield" x="0" y="8" width="88" height="100"/>
+        <text class="wm-sub" x="104" y="44" font-size="20">텅장</text>
+        <text class="wm" x="102" y="96" font-size="54" letter-spacing="-1.5">방어전</text>
+      </svg>
+    </div>
+
+    <hr>
+    <p class="ctx-title">영수증 머리에 넣으면</p>
+    <div class="mini-receipt">
+      <div class="sheet">
+        <svg viewBox="0 0 200 40" width="168" role="img" aria-label="텅장방어전">
+          <use href="#shield" x="0" y="2" width="31" height="36"/>
+          <text class="wm" x="40" y="29" font-size="24" letter-spacing="-0.5">텅장방어전</text>
+        </svg>
+        <p class="room">10월 첫째 주 방어전</p>
+        <p class="meta">9/30(수) – 10/7(수) · 6일째 / 8일</p>
+        <p class="rank"><mark>3위</mark> <span style="font-size:15px;color:var(--ink-soft)">/ 5명</span></p>
+      </div>
+    </div>
+
+    <hr>
+    <p class="ctx-title">작은 아이콘 (카톡 프로필, 브라우저 탭)</p>
+    <div class="icons">
+      <figure>
+        <div class="app-icon r" style="width:72px;height:72px"><svg width="46" height="52" aria-hidden="true"><use href="#shield"/></svg></div>
+        <figcaption>72</figcaption>
+      </figure>
+      <figure>
+        <div class="app-icon c" style="width:44px;height:44px"><svg width="26" height="30" aria-hidden="true"><use href="#shield"/></svg></div>
+        <figcaption>44</figcaption>
+      </figure>
+      <figure>
+        <svg width="16" height="18" aria-hidden="true"><use href="#shield"/></svg>
+        <figcaption>16</figcaption>
+      </figure>
+    </div>
+
+    <hr>
+    <p class="why"><b>이런 느낌이에요.</b> 텅 빈 통장을 지키는 방패예요. 위쪽은 영수증 톱니, 가운데는 원화(₩)의 가로줄이 바리케이드가 돼요. 대학생이 이미 쓰는 "텅장"이라 듣자마자 웃겨요.</p>
+  </section>
+
+  <!-- B안 -->
+  <section class="paper" aria-labelledby="b-name">
+    <p class="opt-label"><span class="letter">B</span><span class="name" id="b-name">통장방어전</span></p>
+
+    <div class="hero-logo">
+      <svg viewBox="0 0 300 170" role="img" aria-label="통장방어전 로고: 파란 인주로 찍힌 도장">
+        <g transform="rotate(-6 150 85)" filter="url(#ink)" fill="none" stroke="#2647b8">
+          <rect x="40" y="20" width="220" height="130" rx="14" stroke-width="7"/>
+          <rect x="52" y="32" width="196" height="106" rx="7" stroke-width="2.2"/>
+          <line x1="70" y1="85" x2="230" y2="85" stroke-width="2.2" stroke-dasharray="5 5"/>
+          <text x="150" y="72" text-anchor="middle" font-size="38" font-weight="900" fill="#2647b8" stroke="none" letter-spacing="10" style="font-family:var(--font)">통장</text>
+          <text x="150" y="126" text-anchor="middle" font-size="40" font-weight="900" fill="#2647b8" stroke="none" letter-spacing="4" style="font-family:var(--font)">방어전</text>
+        </g>
+      </svg>
+    </div>
+
+    <hr>
+    <p class="ctx-title">영수증 머리에 넣으면</p>
+    <div class="mini-receipt">
+      <div class="sheet">
+        <svg viewBox="0 0 300 170" width="138" role="img" aria-label="통장방어전">
+          <g transform="rotate(-6 150 85)" fill="none" stroke="#2647b8">
+            <rect x="40" y="20" width="220" height="130" rx="14" stroke-width="8"/>
+            <rect x="52" y="32" width="196" height="106" rx="7" stroke-width="3"/>
+            <text x="150" y="72" text-anchor="middle" font-size="40" font-weight="900" fill="#2647b8" stroke="none" letter-spacing="10" style="font-family:var(--font)">통장</text>
+            <text x="150" y="126" text-anchor="middle" font-size="42" font-weight="900" fill="#2647b8" stroke="none" letter-spacing="4" style="font-family:var(--font)">방어전</text>
+          </g>
+        </svg>
+        <p class="room">10월 첫째 주 방어전</p>
+        <p class="meta">9/30(수) – 10/7(수) · 6일째 / 8일</p>
+        <p class="rank"><mark>3위</mark> <span style="font-size:15px;color:var(--ink-soft)">/ 5명</span></p>
+      </div>
+    </div>
+
+    <hr>
+    <p class="ctx-title">작은 아이콘 (카톡 프로필, 브라우저 탭)</p>
+    <div class="icons">
+      <figure>
+        <div class="app-icon r" style="width:72px;height:72px">
+          <svg viewBox="0 0 60 60" width="50" height="50" aria-hidden="true">
+            <g transform="rotate(-6 30 30)" fill="none" stroke="#2647b8">
+              <rect x="6" y="6" width="48" height="48" rx="8" stroke-width="4"/>
+              <text x="30" y="40" text-anchor="middle" font-size="26" font-weight="900" fill="#2647b8" stroke="none" style="font-family:var(--font)">방</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption>72</figcaption>
+      </figure>
+      <figure>
+        <div class="app-icon c" style="width:44px;height:44px">
+          <svg viewBox="0 0 60 60" width="32" height="32" aria-hidden="true">
+            <g transform="rotate(-6 30 30)" fill="none" stroke="#2647b8">
+              <rect x="6" y="6" width="48" height="48" rx="8" stroke-width="5"/>
+              <text x="30" y="41" text-anchor="middle" font-size="28" font-weight="900" fill="#2647b8" stroke="none" style="font-family:var(--font)">방</text>
+            </g>
+          </svg>
+        </div>
+        <figcaption>44</figcaption>
+      </figure>
+      <figure>
+        <svg viewBox="0 0 60 60" width="16" height="16" aria-hidden="true">
+          <rect x="4" y="4" width="52" height="52" rx="10" fill="#2647b8"/>
+          <text x="30" y="42" text-anchor="middle" font-size="32" font-weight="900" fill="#ffffff" style="font-family:var(--font)">방</text>
+        </svg>
+        <figcaption>16</figcaption>
+      </figure>
+    </div>
+
+    <hr>
+    <p class="why"><b>이런 느낌이에요.</b> 이번 주 통장을 지켜 냈다는 "방어 성공" 도장이에요. 영수증 화면의 완주 도장과 같은 파란 인주라 서비스 안에서 자연스럽게 이어져요. 뜻이 바로 읽혀서 발표 자리에서도 무난해요.</p>
+  </section>
+
+  <!-- C안 -->
+  <section class="paper" aria-labelledby="c-name">
+    <p class="opt-label"><span class="letter">C</span><span class="name" id="c-name">감열지 2배 인쇄 (텅장방어전)</span></p>
+
+    <div class="hero-logo">
+      <svg viewBox="0 0 400 300" role="img" aria-label="텅장방어전 로고: 영수증 프린터가 점으로 찍은 방패와 2배 높이 글자">
+        <text x="200" y="26" text-anchor="middle" font-family="Consolas, monospace" font-size="15" fill="#1c1c21" letter-spacing="3">* * * * * * * * * * * * * * *</text>
+        <use href="#pixel-shield" x="167" y="40" width="66" height="66"/>
+        <text x="200" y="138" text-anchor="middle" class="wm-sub" font-size="20" letter-spacing="18">텅장</text>
+        <g mask="url(#thermal-mask)">
+          <g transform="translate(0 148) scale(1 1.8)">
+            <text x="200" y="58" text-anchor="middle" class="wm" font-size="68" letter-spacing="4">방어전</text>
+          </g>
+        </g>
+        <text x="200" y="290" text-anchor="middle" font-family="Consolas, monospace" font-size="15" fill="#1c1c21" letter-spacing="3">= = = = = = = = = = = = = = =</text>
+      </svg>
+    </div>
+    <p class="ctx-title" style="text-align:center;margin-top:-4px">통장으로 정하면 위 작은 글자만 '통장'으로 바뀌어요</p>
+
+    <hr>
+    <p class="ctx-title">영수증 머리에 넣으면</p>
+    <div class="mini-receipt">
+      <div class="sheet">
+        <svg viewBox="0 0 120 92" width="104" role="img" aria-label="텅장방어전">
+          <use href="#pixel-shield" x="46" y="0" width="28" height="28"/>
+          <text x="60" y="44" text-anchor="middle" class="wm-sub" font-size="10" letter-spacing="9">텅장</text>
+          <g transform="translate(0 46) scale(1 1.75)">
+            <text x="60" y="24" text-anchor="middle" class="wm" font-size="28" letter-spacing="2">방어전</text>
+          </g>
+        </svg>
+        <p class="room">10월 첫째 주 방어전</p>
+        <p class="meta">9/30(수) – 10/7(수) · 6일째 / 8일</p>
+        <p class="rank"><mark>3위</mark> <span style="font-size:15px;color:var(--ink-soft)">/ 5명</span></p>
+      </div>
+    </div>
+
+    <hr>
+    <p class="ctx-title">작은 아이콘 (카톡 프로필, 브라우저 탭)</p>
+    <div class="icons">
+      <figure>
+        <div class="app-icon r" style="width:72px;height:72px"><svg width="44" height="44" aria-hidden="true"><use href="#pixel-shield"/></svg></div>
+        <figcaption>72</figcaption>
+      </figure>
+      <figure>
+        <div class="app-icon c" style="width:44px;height:44px"><svg width="22" height="22" aria-hidden="true"><use href="#pixel-shield"/></svg></div>
+        <figcaption>44</figcaption>
+      </figure>
+      <figure>
+        <svg width="16" height="16" aria-hidden="true"><use href="#pixel-shield" width="16" height="16"/></svg>
+        <figcaption>16</figcaption>
+      </figure>
+    </div>
+
+    <hr>
+    <p class="why"><b>이런 느낌이에요.</b> 영수증 프린터가 점을 찍어 만든 로고예요. 방패는 칸 단위 픽셀, "방어전"은 영수증 프린터의 실제 기능인 2배 높이 인쇄로 늘렸어요. 작은 아이콘에서도 픽셀 방패가 또렷해요.</p>
+  </section>
+
+  <!-- D안 -->
+  <section class="paper" aria-labelledby="d-name">
+    <p class="opt-label"><span class="letter">D</span><span class="name" id="d-name">방어전.exe (텅장방어전)</span></p>
+
+    <div class="hero-logo">
+      <div class="win big" role="img" aria-label="텅장방어전 로고: 흑백 컴퓨터 창 안의 픽셀 방패와 방어 진행 막대">
+        <p class="win-title"><i aria-hidden="true"></i><span>텅장방어전.exe</span></p>
+        <div class="win-body">
+          <svg width="55" height="55" aria-hidden="true" shape-rendering="crispEdges"><use href="#pixel-shield-mono"/></svg>
+          <div class="win-state">
+            <p>텅장 방어 중</p>
+            <div class="win-bar"><span style="width:75%"></span></div>
+            <p style="margin:8px 0 0">6/8일</p>
+          </div>
+        </div>
+        <div class="win-btns"><span class="win-btn">계속 버티기</span></div>
+      </div>
+    </div>
+    <p class="ctx-title" style="text-align:center;margin-top:6px">진행 막대는 실제 방 기간을 따라 채워져요</p>
+
+    <hr>
+    <p class="ctx-title">영수증 머리에 넣으면</p>
+    <div class="mini-receipt">
+      <div class="sheet">
+        <div class="win mini" role="img" aria-label="텅장방어전 · 6일째 / 8일">
+          <p class="win-title"><i aria-hidden="true"></i><span>텅장방어전.exe</span></p>
+          <div class="win-body">
+            <svg width="33" height="33" aria-hidden="true" shape-rendering="crispEdges"><use href="#pixel-shield-mono"/></svg>
+            <div class="win-state"><p>방어 중 <b>6/8</b>일</p><div class="win-bar"><span style="width:75%"></span></div></div>
+          </div>
+        </div>
+        <p class="room">10월 첫째 주 방어전</p>
+        <p class="meta">9/30(수) – 10/7(수) · 6일째 / 8일</p>
+        <p class="rank"><mark>3위</mark> <span style="font-size:15px;color:var(--ink-soft)">/ 5명</span></p>
+      </div>
+    </div>
+
+    <hr>
+    <p class="ctx-title">작은 아이콘 (카톡 프로필, 브라우저 탭)</p>
+    <div class="icons">
+      <figure>
+        <div class="icon-win"><b></b><svg width="44" height="44" aria-hidden="true" shape-rendering="crispEdges"><use href="#pixel-shield-mono"/></svg></div>
+        <figcaption>72</figcaption>
+      </figure>
+      <figure>
+        <div class="app-icon c" style="width:44px;height:44px"><svg width="22" height="22" aria-hidden="true" shape-rendering="crispEdges"><use href="#pixel-shield-mono"/></svg></div>
+        <figcaption>44</figcaption>
+      </figure>
+      <figure>
+        <svg width="16" height="16" aria-hidden="true" shape-rendering="crispEdges"><use href="#pixel-shield-mono" width="16" height="16"/></svg>
+        <figcaption>16</figcaption>
+      </figure>
+    </div>
+
+    <hr>
+    <p class="why"><b>이런 느낌이에요.</b> 옛날 흑백 컴퓨터 창이에요. 로고 안 진행 막대가 우리 방이 며칠째 버티는 중인지 실제로 보여 줘서, 로고가 곧 진행 상황이에요. 색 없이 흑백이라 영수증 화면과 잘 섞이고 형광펜(나)이 더 잘 보여요.</p>
+  </section>
+</div>
+
+<p class="vote-foot">단톡방에 A, B, C, D 중 하나로 투표해 주세요. 정해지면 보드와 결산 영수증의 "버티기" 자리에 바로 넣어요.</p>
+</body>
+</html>

@@ -1,0 +1,27 @@
+{
+  "sample_me": 1,
+  "room": {
+    "code": "sample", "name": "10월 첫째 주 방어전",
+    "start_date": "2026-10-02", "end_date": "2026-10-08", "today": "2026-10-05",
+    "started": true, "ended": false, "result_open": false, "preview": false,
+    "day_index": 4, "total_days": 7, "days_left": 3
+  },
+  "member_count": 5,
+  "players": [
+    { "member_id": 1, "nickname": "발표자" }, { "member_id": 2, "nickname": "짠돌이" },
+    { "member_id": 3, "nickname": "카페중독" }, { "member_id": 4, "nickname": "큰손" },
+    { "member_id": 5, "nickname": "포기각" }
+  ],
+  "members": [
+    { "member_id": 2, "nickname": "짠돌이", "budget": 100000, "spent": 22000, "remaining": 78000,
+      "usage_pct": 22, "rank": 1, "medal": "gold", "over": false, "unconfirmed": false, "gave_up": false },
+    { "member_id": 1, "nickname": "발표자", "budget": 100000, "spent": 41500, "remaining": 58500,
+      "usage_pct": 42, "rank": 2, "medal": "silver", "over": false, "unconfirmed": false, "gave_up": false },
+    { "member_id": 3, "nickname": "카페중독", "budget": 80000, "spent": 52000, "remaining": 28000,
+      "usage_pct": 65, "rank": 3, "medal": "bronze", "over": false, "unconfirmed": false, "gave_up": false },
+    { "member_id": 4, "nickname": "큰손", "budget": 70000, "spent": 85000, "remaining": -15000,
+      "usage_pct": 121, "rank": 4, "medal": null, "over": true, "unconfirmed": true, "gave_up": false },
+    { "member_id": 5, "nickname": "포기각", "budget": null, "spent": null, "remaining": null,
+      "usage_pct": null, "rank": null, "medal": null, "over": false, "unconfirmed": false, "gave_up": true }
+  ]
+}
