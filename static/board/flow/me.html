@@ -21,7 +21,10 @@
     const enc = encodeURIComponent(code);
     const page = document.getElementById("page");
     let flash = "";
-    let confirmingQuit = false;
+    let editing = false;     // 조정 완료 뒤 '수정하기'를 눌러 다시 고치는 중
+    let focusKey = "";       // 인원 − + 를 누른 뒤 다시 그려도 같은 버튼에 초점을 둔다
+    const MAX_PEOPLE = 20;
+    const FLAG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V3.5"/><path d="M5 4h12.5l-2.5 4.25 2.5 4.25H5" fill="#fff"/></svg>';
     F.toolbar(code);
     F.tabbar(code, "me");
 
@@ -36,7 +39,6 @@
           <a class="button wide" href="${state ? `/flow/r/${enc}` : "/flow"}">${state ? "참여하러 가기" : "새 방 만들기"}</a>`;
         return;
       }
-      if (confirmingQuit) return renderQuit(me);
 
       const info = F.roomInfo(state.room);
       const t = F.totals(state, me);
@@ -50,13 +52,18 @@
       if (gaveUp) {
         hero = `<h1 class="money">항복했어요</h1><p class="sub">결과 카드에는 깃발만 남아요</p>`;
       } else {
+        // 조정 완료는 아래 거래 판에 큰 도장으로 찍는다 (여기서는 확정 전 상태만)
         const state1 = !hasItems ? '<span class="tag">불러오기 전</span>'
-          : t.unconfirmed ? '<span class="tag">미확인</span>'
-          : '<span class="stamp stamp-blue">조정 완료</span>';
-        hero = t.remaining >= 0
+          : t.unconfirmed ? '<span class="tag">미확인</span>' : "";
+        const goal = t.remaining >= 0
           ? `<p class="kicker">목표까지</p><h1 class="money"><mark><span class="n">${F.won(t.remaining)}</span>원</mark> 남았어요</h1>`
           : `<p class="kicker">예산을</p><h1 class="money"><span class="n">${F.won(t.remaining)}</span>원 넘겼어요</h1>`;
-        hero += `<p class="sub"><span><span class="n">${F.won(me.budget)}</span>원 중 <span class="n">${F.won(t.spent)}</span>원 썼어요</span>${state1}</p>`;
+        hero = `
+          <div class="hero-top">
+            <div class="hero-goal">${goal}</div>
+            <button type="button" id="quit" class="quit-btn" aria-haspopup="dialog">${FLAG}<span>항복</span></button>
+          </div>
+          <p class="sub"><span><span class="n">${F.won(me.budget)}</span>원 중 <span class="n">${F.won(t.spent)}</span>원 썼어요</span>${state1}</p>`;
         // 남은 예산 막대: 여유 → 주의 → 위험 → 초과
         const left = Math.max(0, Math.round((t.remaining / me.budget) * 100));
         const level = t.remaining < 0 ? "over" : left >= 50 ? "ok" : left >= 20 ? "warn" : "danger";
@@ -74,19 +81,31 @@
           ${pace}`;
       }
 
+      // 조정 완료 뒤에는 잠근다. 다시 고치려면 '수정하기'
+      const locked = hasItems && !t.unconfirmed && !editing;
+      const peopleText = (n) => (n === 1 ? "혼자" : `<span class="n">${n}</span>명`);
+
       const rows = items.map((e) => {
         const sub = [];
         sub.push(`<span class="when">${F.md(e.spent_on)}</span>`);
+        if (e.time) sub.push(`<span class="when"><span class="n">${e.time}</span></span>`);
         if (e.people > 1 && !e.excluded) sub.push(`<span class="when">내 몫 <span class="n">${F.won(F.share(e.amount, e.people))}</span>원</span>`);
 
         let ctl;
         if (e.auto) ctl = `<span class="stamp stamp-gray">${e.auto}</span>`;
         else if (gaveUp) ctl = "";
-        else {
-          const opts = [1, 2, 3, 4, 5, 6].map((n) => `<option value="${n}"${n === e.people ? " selected" : ""}>${n === 1 ? "나만" : n + "명이서"}</option>`).join("");
+        else if (locked) {
+          ctl = e.excluded ? '<span class="out-mark">제외</span>'
+            : `<span class="ctl-val">${e.people === 1 ? "혼자" : `<span class="n">${e.people}</span>명이서`}</span>`;
+        } else {
+          const name = F.esc(e.merchant);
           ctl = `
-            <select data-ref="${e.ref}" data-field="people" aria-label="${F.esc(e.merchant)} 같이 낸 사람">${opts}</select>
-            <label class="toggle"><input type="checkbox" data-ref="${e.ref}" data-field="excluded"${e.excluded ? " checked" : ""}><span>제외</span></label>`;
+            <span class="count" role="group" aria-label="${name} 같이 낸 사람">
+              <button type="button" data-ref="${e.ref}" data-step="-1" aria-label="한 명 빼기"${e.people <= 1 ? " disabled" : ""}>−</button>
+              <span class="count-n" aria-live="polite">${peopleText(e.people)}</span>
+              <button type="button" data-ref="${e.ref}" data-step="1" aria-label="한 명 더하기"${e.people >= MAX_PEOPLE ? " disabled" : ""}>+</button>
+            </span>
+            <label class="toggle"><input type="checkbox" data-ref="${e.ref}" data-field="excluded"${e.excluded ? " checked" : ""} aria-label="${name} 제외"><span>제외</span></label>`;
         }
         return `
           <li class="tx${e.excluded ? " is-out" : ""}">
@@ -98,10 +117,11 @@
           </li>`;
       }).join("");
 
-      const needConfirm = hasItems && t.unconfirmed && !gaveUp;
+      const needConfirm = hasItems && (t.unconfirmed || editing) && !gaveUp;
       let action = "";
       if (!gaveUp && !hasItems) action = `<button type="button" id="load" class="wide">${F.accountName(me.account)}에서 불러오기</button>`;
       else if (needConfirm) action = '<div class="sticky"><button type="button" id="confirm" class="wide">조정 완료</button></div>';
+      else if (locked && !gaveUp) action = '<button type="button" id="edit" class="secondary wide edit-btn">수정하기</button>';
 
       page.innerHTML = `
         <p class="brand">텅장방어전</p>
@@ -110,66 +130,104 @@
         ${flash ? `<p class="flash" role="status">${flash}</p>` : ""}
         ${!hasItems ? `<hr>${action}` : ""}
         ${hasItems ? `
-          <section class="panel" aria-label="불러온 거래">
+          <section class="panel${locked && !gaveUp ? " is-locked" : ""}" aria-label="불러온 거래">
+            ${locked && !gaveUp ? '<span class="stamp stamp-blue done-stamp">조정 완료</span>' : ""}
             <p class="list-head"><span>불러온 거래 <span class="n">${items.length}</span>건</span>${gaveUp ? "" : '<button type="button" id="load" class="text-btn">새로 불러오기</button>'}</p>
             <ul class="list">${rows}</ul>
             ${action}
-          </section>` : ""}
-        <hr>
-        <p class="links">
-          <button type="button" id="invite" class="text-btn">친구 초대 링크 복사</button>
-          ${gaveUp ? "" : '<button type="button" id="quit" class="text-btn danger-text">항복하기</button>'}
-        </p>`;
+          </section>` : ""}`;
       document.title = `내 페이지 · ${state.room.name}`;
       flash = "";
 
       const load = document.getElementById("load");
       if (load) load.addEventListener("click", () => {
         const added = F.importTx(code, meId);
-        flash = added ? `${added}건 불러왔어요. 같이 낸 건 인원을, 내 지출이 아닌 건 제외를 골라요` : "새 거래가 없어요";
+        flash = added ? "" : "새 거래가 없어요";
         render();
       });
       const confirmBtn = document.getElementById("confirm");
       if (confirmBtn) confirmBtn.addEventListener("click", () => {
         F.confirm(code, meId);
+        editing = false;
         flash = "조정 완료. 결과 카드에 이대로 들어가요";
         render();
         window.scrollTo(0, 0);
       });
-      const invite = document.getElementById("invite");
-      if (invite) invite.addEventListener("click", async () => {
-        const link = `${location.origin}/flow/r/${enc}`;
-        try { await navigator.clipboard.writeText(link); invite.textContent = "링크를 복사했어요"; }
-        catch (e) { invite.textContent = link; }
-        setTimeout(() => { invite.textContent = "친구 초대 링크 복사"; }, 1800);
+      const edit = document.getElementById("edit");
+      if (edit) edit.addEventListener("click", () => {
+        editing = true;
+        render();
+        const first = page.querySelector(".tx .count button:not(:disabled), .tx .toggle input");
+        if (first) first.focus();
       });
       const quit = document.getElementById("quit");
-      if (quit) quit.addEventListener("click", () => { confirmingQuit = true; render(); window.scrollTo(0, 0); });
-      page.querySelectorAll("[data-ref]").forEach((el) => el.addEventListener("change", () => {
-        const field = el.getAttribute("data-field");
-        F.updateItem(code, meId, el.getAttribute("data-ref"), { [field]: field === "people" ? Number(el.value) : el.checked });
+      if (quit) quit.addEventListener("click", () => openQuit(me));
+      page.querySelectorAll("[data-field]").forEach((el) => el.addEventListener("change", () => {
+        F.updateItem(code, meId, el.getAttribute("data-ref"), { excluded: el.checked });
+        focusKey = `${el.getAttribute("data-ref")}:x`;
         render();
       }));
+      page.querySelectorAll("[data-step]").forEach((el) => el.addEventListener("click", () => {
+        const ref = el.getAttribute("data-ref");
+        const item = items.find((e) => e.ref === ref);
+        const next = Math.min(MAX_PEOPLE, Math.max(1, item.people + Number(el.getAttribute("data-step"))));
+        if (next === item.people) return;
+        F.updateItem(code, meId, ref, { people: next });
+        focusKey = `${ref}:${el.getAttribute("data-step")}`;
+        render();
+      }));
+      if (focusKey) {
+        const [ref, what] = focusKey.split(":");
+        const sel = what === "x" ? `[data-ref="${ref}"][data-field]` : `[data-ref="${ref}"][data-step="${what}"]`;
+        const el = page.querySelector(sel);
+        // 끝까지 가서 버튼이 꺼지면 반대쪽 버튼으로
+        const target = el && el.disabled ? page.querySelector(`[data-ref="${ref}"][data-step="${-Number(what)}"]`) : el;
+        if (target) target.focus({ preventScroll: true });
+        focusKey = "";
+      }
     }
 
-    function renderQuit(me) {
-      page.innerHTML = `
-        <p class="brand">텅장방어전</p>
-        <h1>정말 항복할까요?</h1>
-        <p class="muted">되돌릴 수 없어요. 결과 카드에는 깃발만 남아요.</p>
-        <hr>
+    // 항복 확인: 아래에서 올라오는 판. 기본 버튼은 '계속 버티기'
+    const sheet = document.createElement("div");
+    sheet.className = "quit-sheet";
+    sheet.hidden = true;
+    sheet.innerHTML = `
+      <div class="qs-backdrop" data-close></div>
+      <section class="qs-panel" role="dialog" aria-modal="true" aria-labelledby="qs-title" aria-describedby="qs-desc">
+        <span class="qs-flag">${FLAG}</span>
+        <h2 id="qs-title">정말 항복할까요?</h2>
+        <p id="qs-desc" class="muted">되돌릴 수 없어요. 결과 카드에는 깃발만 남아요.</p>
         <div class="stack">
-          <button type="button" id="stay" class="wide">계속 버티기</button>
+          <button type="button" class="wide" data-close>계속 버티기</button>
           <button type="button" id="giveup" class="danger-line wide">항복하기</button>
-        </div>`;
-      document.getElementById("stay").addEventListener("click", () => { confirmingQuit = false; render(); });
-      document.getElementById("giveup").addEventListener("click", () => {
-        F.giveUp(code, me.id);
-        confirmingQuit = false;
-        render();
-      });
-      document.getElementById("stay").focus();
+        </div>
+      </section>`;
+    document.body.append(sheet);
+    let quitFor = null;
+    function openQuit(me) {
+      quitFor = me.id;
+      sheet.hidden = false;
+      document.body.style.overflow = "hidden";
+      sheet.querySelector(".qs-panel [data-close]").focus();
     }
+    function closeQuit() {
+      sheet.hidden = true;
+      document.body.style.overflow = "";
+      const q = document.getElementById("quit");
+      if (q) q.focus();
+    }
+    sheet.addEventListener("click", (ev) => {
+      if (ev.target.closest("[data-close]")) closeQuit();
+      if (ev.target.closest("#giveup") && quitFor != null) {
+        F.giveUp(code, quitFor);
+        quitFor = null;
+        sheet.hidden = true;
+        document.body.style.overflow = "";
+        render();
+        window.scrollTo(0, 0);
+      }
+    });
+    document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && !sheet.hidden) closeQuit(); });
 
     render();
   })();
