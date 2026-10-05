@@ -154,3 +154,39 @@ def test_join_saves_account(room_code):
     me = join(room_code)
     row = db.fetch_one("select fintech_use_num from members where id = %s", (me["id"],))
     assert row["fintech_use_num"] == ACCOUNT
+
+
+# 항복 (10/3): gave_up_at 을 처음 누른 시각으로 기록한다. 되돌리기는 없다
+
+
+def give_up(code, member_id):
+    return client.post(f"/api/rooms/{code}/members/{member_id}/give-up")
+
+
+@needs_db
+def test_give_up_sets_time(room_code):
+    me = join(room_code)
+    res = give_up(room_code, me["id"])
+    assert res.status_code == 200
+    assert res.json()["member_id"] == me["id"]
+    assert res.json()["gave_up_at"]
+    row = db.fetch_one("select gave_up_at from members where id = %s", (me["id"],))
+    assert row["gave_up_at"] is not None
+
+
+@needs_db
+def test_give_up_twice_keeps_first_time(room_code):
+    me = join(room_code)
+    first = give_up(room_code, me["id"]).json()["gave_up_at"]
+    second = give_up(room_code, me["id"])
+    assert second.status_code == 200
+    assert second.json()["gave_up_at"] == first
+
+
+@needs_db
+def test_give_up_other_room_or_unknown_member(room_code):
+    me = join(room_code)
+    assert give_up("demo", me["id"]).status_code == 404   # 다른 방의 멤버 id
+    assert give_up(room_code, 999999999).status_code == 404
+    row = db.fetch_one("select gave_up_at from members where id = %s", (me["id"],))
+    assert row["gave_up_at"] is None
