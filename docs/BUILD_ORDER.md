@@ -74,7 +74,7 @@ API는 레인 이름으로 시작한다: `/api/rooms/...` `/api/expenses/...` `/
 | 마감 자동 반영 🟡 (이름은 이태윤이 정한다) | 아직 안 불러온 멤버의 내역을 채운다 | 보드 레인 (결과 카드 열기 전) |
 | `POST /api/rooms/{code}/members` | 참여. 닉네임 · 예산 · 숫자 4자리(`pin`)를 받는다 | 방 레인 (방 홈) |
 | `POST /api/rooms/{code}/members/{id}/rejoin` | 다시 들어오기. `{ "pin": "1234" }` → 맞으면 멤버(`id`)를 돌려준다. 틀리면 401 | 방 레인 (방 홈에서 이름 누르기) |
-| `POST /api/rooms/{code}/members/{id}/give-up` 🟡 | 항복. `gave_up_at`을 기록한다 | 지출 레인 (본인 페이지의 항복 버튼) |
+| `POST /api/rooms/{code}/members/{id}/give-up` | 항복. `gave_up_at`을 기록한다 | 지출 레인 (본인 페이지의 항복 버튼) |
 
 ### 테이블
 

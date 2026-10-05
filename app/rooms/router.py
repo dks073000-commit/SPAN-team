@@ -154,3 +154,22 @@ def rejoin_room(code: str, member_id: int, body: RejoinIn):
     if not check_pin(body.pin, m["pin_hash"]):
         raise HTTPException(401, "4자리가 맞지 않아요")
     return {"id": m["id"], "nickname": m["nickname"], "budget": m["budget"]}
+
+
+@router.post("/api/rooms/{code}/members/{member_id}/give-up")
+def give_up(code: str, member_id: int):
+    """항복(중도포기): 본인 페이지의 [항복하기] 버튼이 부른다. 되돌릴 수 없다.
+
+    처음 누른 시각만 남긴다. 이미 항복했으면 그 시각 그대로 성공으로 돌려준다 (두 번 눌러도 같은 결과).
+    """
+    row = fetch_one(
+        """
+        update members set gave_up_at = coalesce(gave_up_at, now())
+        where room_code = %s and id = %s
+        returning id, gave_up_at
+        """,
+        (code, member_id),
+    )
+    if row is None:
+        raise HTTPException(404, "이 방에 없는 멤버입니다")
+    return {"member_id": row["id"], "gave_up_at": row["gave_up_at"]}
