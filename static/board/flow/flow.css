@@ -167,16 +167,6 @@ main > .brand::before, .paper > .brand::before { content: ""; width: 23px; heigh
 hr { margin: 20px -4px; }
 
 /* 은행 연결 동의: 돈 이야기를 하는 화면이라 게임 요소 없이. 누가 무엇을 하는지 주어를 붙여 한 줄씩 */
-.link-visual { display: flex; align-items: flex-start; justify-content: center; gap: 6px; margin: 2px 0 14px; }
-.lv-end { display: grid; justify-items: center; gap: 4px; width: 64px; }
-.lv-end small { font-size: 11px; font-weight: 700; color: var(--ink-soft); white-space: nowrap; }
-.lv-ic { width: 44px; height: 44px; border-radius: 12px; border: 1.5px solid var(--ink); display: grid; place-items: center; background: var(--paper); }
-.lv-ic svg { width: 24px; height: 24px; }
-.lv-app::before { content: ""; width: 24px; height: 27px; background: var(--brand-shield) no-repeat center / contain; }
-.lv-line { flex: 1; max-width: 120px; height: 44px; display: flex; align-items: center; justify-content: center; position: relative; }
-.lv-line::before { content: ""; position: absolute; left: 0; right: 0; top: 50%; border-top: 1.5px dashed var(--ink-soft); }
-.lv-tag { position: relative; display: inline-flex; align-items: center; gap: 4px; background: var(--paper); padding: 0 6px; font-size: 12px; font-weight: 700; }
-.lv-tag svg { width: 14px; height: 14px; }
 .consent-title { font-size: 24px; text-align: center; margin: 0 0 4px; }
 .consent-sub { text-align: center; margin: 0 0 22px; }
 .scope { list-style: none; margin: 0; padding: 0; display: grid; gap: 18px; }
@@ -185,11 +175,6 @@ hr { margin: 20px -4px; }
 .sc-ic svg { width: 19px; height: 19px; }
 .scope b { display: block; font-size: 15px; font-weight: 900; line-height: 1.35; }
 .scope li span:not(.sc-ic) { display: block; font-size: 14px; color: var(--ink-soft); line-height: 1.45; margin-top: 1px; }
-.terms { margin: 22px 0 14px; font-size: 13px; color: var(--ink-soft); }
-.terms summary { cursor: pointer; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; width: fit-content; }
-.terms dl { margin: 10px 0 0; display: grid; gap: 6px; background: #f6f6f8; border-radius: 10px; padding: 12px 14px; }
-.terms dl div { display: grid; grid-template-columns: 6.5em minmax(0, 1fr); gap: 8px; }
-.terms dd { margin: 0; color: var(--ink); }
 .agree span { line-height: 1.4; }
 .agree b { color: var(--ink); }
 main.flow-step .step-actions button:disabled { opacity: 0.35; cursor: not-allowed; }
@@ -305,3 +290,49 @@ body.has-tabbar .counter { padding-bottom: calc(96px + env(safe-area-inset-botto
   .db-seg button { padding: 0 9px; }
   .db-set { padding: 0 9px; }
 }
+/* ── 10/6 에이전트1: 참여·방 만들기 ── */
+/* 동의 체크 아래 흐린 한 줄 + '자세히 보기' (팝업으로 법정 고지 세 덩어리) */
+.agree-terms { margin-top: 22px; }
+.agree-note { margin: 0 0 6px 30px; font-size: 13px; line-height: 1.5; color: var(--ink-soft); }
+.agree-note .text-btn { padding: 4px 0; font-weight: 700; color: var(--ink); }
+.terms-sheet {
+  position: fixed; inset: auto 0 0 0; margin: 0 auto; padding: 0; border: 0;
+  width: 100%; max-width: 480px; max-height: 88dvh; overflow-y: auto; overscroll-behavior: contain;
+  background: var(--paper); color: var(--ink); border-radius: 20px 20px 0 0;
+  box-shadow: 0 -10px 30px rgba(28, 28, 33, 0.18);
+  font-family: var(--font, "Noto Sans KR", sans-serif);
+}
+.terms-sheet[open] { animation: ds-up 220ms cubic-bezier(0.16, 1, 0.3, 1); }
+@media (prefers-reduced-motion: reduce) { .terms-sheet[open] { animation: none; } }
+.terms-sheet::backdrop { background: rgba(28, 28, 33, 0.45); }
+body:has(dialog[open]) { overflow: hidden; }
+.ts-panel { padding: 10px 20px calc(20px + env(safe-area-inset-bottom, 0px)); }
+.ts-handle { display: block; width: 40px; height: 4px; border-radius: 4px; background: var(--rule); margin: 0 auto 14px; }
+.terms-sheet h2 { font-size: 19px; font-weight: 900; margin: 0 0 12px; }
+.terms-sheet section { padding: 14px 0; border-top: 1.5px dashed var(--rule); }
+.terms-sheet h3 { font-size: 15px; font-weight: 900; margin: 0 0 8px; }
+.terms-sheet dl { margin: 0; display: grid; gap: 6px; }
+.terms-sheet dl div { display: grid; grid-template-columns: 6.2em minmax(0, 1fr); gap: 8px; font-size: 13.5px; line-height: 1.5; }
+.terms-sheet dt { color: var(--ink-soft); }
+.terms-sheet dd { margin: 0; }
+.terms-sheet section p { margin: 0; font-size: 13.5px; line-height: 1.55; }
+.terms-sheet .ts-law { margin-top: 8px; font-size: 12px; color: var(--ink-soft); }
+.terms-sheet #terms-close { margin-top: 6px; }
+
+/* 숫자 4자리 칸 + 눈 버튼 (터치 영역 44px) */
+.pin-field { display: block; position: relative; margin-top: 4px; }
+.form .pin-field input { margin-top: 0; padding-right: 52px; }
+.eye-btn {
+  position: absolute; right: 2px; top: 50%; translate: 0 -50%;
+  width: 44px; height: 44px; min-height: 44px; padding: 0;
+  border: 0; border-radius: 10px; background: transparent; color: var(--ink-soft);
+}
+.eye-btn svg { width: 22px; height: 22px; }
+.eye-btn[aria-pressed="true"] { color: var(--ink); }
+.eye-btn:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; }
+.eye-btn:active { transform: none; }
+/* 다시 들어오기의 큰 칸: 가운데 정렬은 그대로, 눈 버튼은 칸 오른쪽 바깥 */
+.pin-field-big { display: grid; grid-template-columns: 44px minmax(0, 220px) 44px; justify-content: center; align-items: center; gap: 6px; margin: 6px 0 4px; }
+.pin-field-big::before { content: ""; }
+.pin-field-big .pin-input { margin: 0; max-width: none; }
+.pin-field-big .eye-btn { position: static; translate: none; }
