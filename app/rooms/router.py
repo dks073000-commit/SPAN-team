@@ -91,12 +91,15 @@ def get_room(code: str):
 
 
 PIN = Field(pattern=r"^[0-9]{4}$")                         # 숫자 4자리 (다시 들어오기용)
+# 가짜 은행 계좌 연결에서 돌려받은 핀테크이용번호. 연결 없이는 참여할 수 없다 (미제출을 없애기 위해, 10/3)
+FINTECH_USE_NUM = Field(pattern=r"^[A-Za-z0-9]{1,40}$")
 
 
 class MemberIn(BaseModel):
     nickname: str = Field(min_length=1, max_length=20)
     budget: int = Field(gt=0, le=100_000_000)                # 원
     pin: str = PIN
+    fintech_use_num: str = FINTECH_USE_NUM
 
     @field_validator("nickname")
     @classmethod
@@ -109,7 +112,10 @@ class MemberIn(BaseModel):
 
 @router.post("/api/rooms/{code}/members", status_code=201)
 def join_room(code: str, member: MemberIn):
-    """닉네임 · 예산 · 숫자 4자리로 참여한다. 돌려준 id 를 브라우저가 member_id:{code} 로 저장한다."""
+    """닉네임 · 예산 · 숫자 4자리 · 연결한 가상 계좌로 참여한다. 돌려준 id 를 브라우저가 member_id:{code} 로 저장한다.
+
+    계좌는 가짜 은행 화면(/api/expenses/mockbank/oauth/2.0/authorize)에서 고르고, 돌아온 fintech_use_num 을 받는다.
+    """
     with connect() as conn:
         if conn.execute("select 1 from rooms where code = %s", (code,)).fetchone() is None:
             raise HTTPException(404, "없는 방입니다")
@@ -120,10 +126,10 @@ def join_room(code: str, member: MemberIn):
             raise HTTPException(409, "이미 있는 닉네임입니다")
         return conn.execute(
             """
-            insert into members (room_code, nickname, budget, pin_hash) values (%s, %s, %s, %s)
+            insert into members (room_code, nickname, budget, pin_hash, fintech_use_num) values (%s, %s, %s, %s, %s)
             returning id, nickname, budget
             """,
-            (code, member.nickname, member.budget, hash_pin(member.pin)),
+            (code, member.nickname, member.budget, hash_pin(member.pin), member.fintech_use_num),
         ).fetchone()
 
 
