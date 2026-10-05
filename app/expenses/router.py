@@ -6,10 +6,12 @@ from fastapi import APIRouter
 from fastapi.responses import FileResponse
 
 from app.db import fetch_all
+from app.expenses.mockbank.router import router as mockbank_router
 
 STATIC = Path(__file__).resolve().parents[2] / "static" / "expenses"
 
 router = APIRouter()
+router.include_router(mockbank_router)  # 가짜 은행: /api/expenses/mockbank/...
 
 
 @router.get("/r/{code}/add", include_in_schema=False)
