@@ -13,7 +13,7 @@
   --hl: #e4ff4a;           /* 형광펜: "나" 전용 */
   --hl-soft: #f4ffbf;      /* 형광펜 줄 바탕 */
   --stamp-red: #cf2338;    /* 초과 도장 */
-  --stamp-gray: #7a7a85;   /* 항복 · 미확인 · 봉인 도장 */
+  --stamp-gray: #7a7a85;   /* 항복 · 미확인 도장 */
   --stamp-blue: #2647b8;   /* 완주 도장 */
   --gold: #f2c94c;         /* 1등 메달 (글자는 잉크색) */
   --silver: #d3d6dc;       /* 2등 */
@@ -351,6 +351,8 @@ mark {
 }
 .is-story .r-store { font-size: 3.8cqw; }
 .is-story .r-meta { font-size: 3.4cqw; }
+/* 10/6: 꼬리 문구를 지워서, 합계(다 같이 남긴 돈)를 영수증 맨 아래로 내린다 */
+.is-story .s-lines { margin-bottom: auto; }
 .is-story .r-cut { margin: 4.2cqw -1cqw; }
 .s-title { font-size: 11cqw; font-weight: 900; letter-spacing: -0.02em; line-height: 1.1; margin: 1.5cqw 0 1cqw; }
 .s-me { position: relative; padding-right: 22cqw; min-height: 14cqw; display: flex; align-items: center; }
@@ -360,8 +362,8 @@ mark {
 .s-lines { display: grid; }
 .s-line {
   display: grid;
-  grid-template-columns: 7.6cqw minmax(0, 1fr) auto auto;
-  grid-template-areas: "no who pct stamp";
+  grid-template-columns: 7.6cqw minmax(0, 1fr) auto;
+  grid-template-areas: "no who pct";
   column-gap: 2cqw;
   align-items: center;
   padding: 2.6cqw 2cqw;
@@ -378,14 +380,15 @@ mark {
 .s-line .who { grid-area: who; display: flex; align-items: center; gap: 1.5cqw; min-width: 0; font-weight: 500; }
 .s-line .who .name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .s-line .pct { grid-area: pct; font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 700; font-size: 4cqw; text-align: right; min-width: 11cqw; }
-.s-line .stamp { grid-area: stamp; justify-self: end; font-size: 2.8cqw; white-space: nowrap; }
+/* 10/6: 칭호 도장은 이름 바로 옆, 사용률은 줄 오른쪽 끝. 이름이 길면 이름만 줄임표 */
+.s-line .who .stamp { flex: 0 0 auto; font-size: 2.8cqw; white-space: nowrap; margin-left: 0.6cqw; }
+.s-line .who .me-tag, .s-line .who .unc-tag { flex: 0 0 auto; }
 .s-line .me-tag { font-size: 2.8cqw; line-height: 1.6; }
 .s-line .who .name { flex: 0 1 auto; }
 .s-total { display: grid; gap: 1.6cqw; margin: 0; }
 .s-total div { display: flex; justify-content: space-between; align-items: baseline; }
 .s-total dt { color: var(--ink-soft); }
 .s-total dd { margin: 0; font-weight: 700; font-size: 4.4cqw; }
-.is-story .r-foot { margin-top: auto; font-size: 3.2cqw; }
 .story-hint { font-size: 13px; color: var(--ink-soft); }
 .btn:disabled { opacity: 0.6; cursor: progress; }
 

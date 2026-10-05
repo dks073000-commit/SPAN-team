@@ -66,7 +66,7 @@
     <li><span class="chip" style="background:#5e5e68"></span><span><b>흐린 잉크</b> <code>--ink-soft</code></span><span class="use">설명, 보조 글</span></li>
     <li><span class="chip" style="background:#e4ff4a"></span><span><b>형광펜</b> <code>--hl</code></span><span class="use">"나"에게만</span></li>
     <li><span class="chip" style="background:#cf2338"></span><span><b>빨간 인주</b> <code>--stamp-red</code></span><span class="use">초과, 오류, 항복 버튼</span></li>
-    <li><span class="chip" style="background:#7a7a85"></span><span><b>회색 인주</b> <code>--stamp-gray</code></span><span class="use">미확인, 항복, 봉인, 자동 제외</span></li>
+    <li><span class="chip" style="background:#7a7a85"></span><span><b>회색 인주</b> <code>--stamp-gray</code></span><span class="use">미확인, 항복, 자동 제외</span></li>
     <li><span class="chip" style="background:#2647b8"></span><span><b>파란 인주</b> <code>--stamp-blue</code></span><span class="use">완주, 조정 완료</span></li>
     <li><span class="chip" style="background:linear-gradient(90deg,#f2c94c 33%,#d3d6dc 33% 66%,#e3a873 66%)"></span><span><b>메달</b> <code>--gold --silver --bronze</code></span><span class="use">1 · 2 · 3등만</span></li>
     <li><span class="chip" style="background:linear-gradient(90deg,#ff6b5e 16%,#4d7cff 16% 33%,#2fcf9f 33% 50%,#ffb020 50% 66%,#a77bff 66% 83%,#ff6fb5 83%)"></span><span><b>사람 색</b> <code>--p1 ~ --p6</code></span><span class="use">사람 토큰만 (참여 순서로)</span></li>
@@ -117,11 +117,10 @@
   <hr>
   <h2>도장 · 메달 · 꼬리표</h2>
   <div class="row-demo">
-    <span class="stamp stamp-red">초과</span>
+    <span class="stamp stamp-blue">방어전 MVP</span>
     <span class="stamp stamp-blue">완주</span>
-    <span class="stamp stamp-blue">버티기 장인</span>
+    <span class="stamp stamp-red">텅장 엔딩</span>
     <span class="stamp stamp-gray">항복</span>
-    <span class="stamp stamp-gray">봉인</span>
     <span class="tag">미확인</span>
   </div>
   <ul class="list">
@@ -129,9 +128,10 @@
     <li class="line is-me"><span class="medal medal-silver">2</span><span class="who"><span class="token p5 is-me">발</span>발표자 (나)</span><span class="n">31%</span></li>
     <li class="line"><span class="medal medal-bronze">3</span><span class="who"><span class="token p2">카</span>카페중독</span><span class="n">65%</span></li>
     <li class="line"><span class="n">4</span><span class="who"><span class="token p3">큰</span>큰손 <span class="tag">미확인</span></span><span class="n">121%</span></li>
-    <li class="line"><svg class="flag-ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 15V1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M4.3 2.2h8.6l-2.2 3.2 2.2 3.2H4.3z" fill="#fff" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg><span class="who"><span class="token p4 is-quit">포</span>포기각</span><span class="stamp stamp-gray">항복</span></li>
+    <li class="line"><svg class="flag-ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 15V1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M4.3 2.2h8.6l-2.2 3.2 2.2 3.2H4.3z" fill="#fff" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg><span class="who"><span class="token p4 is-quit">포</span>포기각 <span class="stamp stamp-gray">항복</span></span></li>
   </ul>
   <p class="muted">메달 <code>.medal</code> 은 금 · 은 · 동 동전 + 안쪽 점선 링(그림자 없음)이라 사람 토큰과 구분돼요. 4등부터는 숫자. <b>미확인</b>은 조정 전 금액이라는 <code>.tag</code>, <b>항복</b>은 깃발 + 회색 도장이고 금액은 보여주지 않아요.</p>
+  <p class="muted">결과 카드 칭호(10/6 확정): 1등 <b>방어전 MVP</b>(파랑) · 예산 안 <b>완주</b>(파랑) · 예산 초과 <b>텅장 엔딩</b>(빨강) · <b>항복</b>(회색). 결과 줄에서 칭호 도장은 이름 바로 옆, 사용률 %는 줄 오른쪽 끝이에요.</p>
 
   <hr>
   <h2>남은 예산 막대 (내 페이지)</h2>

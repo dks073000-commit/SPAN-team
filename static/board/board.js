@@ -162,7 +162,7 @@
       ${head(room)}
       <hr class="r-cut">
       <section class="r-seal r-reveal" style="--i:1" aria-label="결과 공개까지 남은 날">
-        <p class="seal-d"><span class="num n">${dday}</span><span class="stamp stamp-lg stamp-gray">봉인</span></p>
+        <p class="seal-d"><span class="num n">${dday}</span></p>
         <p class="seal-lead">${lead}</p>
       </section>
       <hr class="r-cut">
@@ -203,11 +203,11 @@
 
   /* ---------- 결산 영수증 (결과 카드) ---------- */
 
-  // 결산 도장: 항복 → 항복, 넘김 → 다음엔 버틴다, 1위 → 버티기 장인, 예산 안 → 완주
+  // 결산 도장: 항복 → 항복, 넘김 → 텅장 엔딩, 1위 → 방어전 MVP, 예산 안 → 완주
   function verdict(m) {
     if (m.gave_up) return { text: "항복", cls: "stamp-gray" };
-    if (m.over) return { text: "다음엔 버틴다", cls: "stamp-red" };
-    if (m.rank === 1) return { text: "버티기 장인", cls: "stamp-blue" };
+    if (m.over) return { text: "텅장 엔딩", cls: "stamp-red" };
+    if (m.rank === 1) return { text: "방어전 MVP", cls: "stamp-blue" };
     return { text: "완주", cls: "stamp-blue" };
   }
 
@@ -250,10 +250,10 @@
             ${token(m.member_id, m.nickname, m.gave_up ? "is-quit" : isMe ? "is-me" : "")}
             <span class="name">${esc(m.nickname)}</span>
             ${isMe ? '<span class="me-tag">나</span>' : ""}
+            <span class="stamp ${v.cls}">${v.text}</span>
             ${m.unconfirmed ? '<span class="unc-tag">미확인</span>' : ""}
           </span>
           <span class="pct">${m.gave_up ? "" : m.usage_pct + "%"}</span>
-          <span class="stamp ${v.cls}">${v.text}</span>
         </li>`;
     }).join("");
 
@@ -272,11 +272,7 @@
       <dl class="s-total r-reveal" style="--i:${members.length + 5}">
         <div><dt>예산 안에서 버틴 사람</dt><dd><span class="n">${finishers}</span> / <span class="n">${members.length}</span>명</dd></div>
         <div><dt>다 같이 남긴 돈</dt><dd><span class="n">${won(kept)}</span>원</dd></div>
-      </dl>
-      <hr class="r-cut">
-      <footer class="r-foot r-reveal" style="--i:${members.length + 6}">
-        <p>${room.preview ? `${md(room.today)}까지 기록 · 미리 보기` : `${md(room.end_date)} 마감 결산`} · 다른 사람은 총액만</p>
-      </footer>`;
+      </dl>`;
 
     lastResult = { data, me };
     $("actions").innerHTML = `
