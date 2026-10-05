@@ -132,7 +132,8 @@
         ${hasItems ? `
           <section class="panel${locked && !gaveUp ? " is-locked" : ""}" aria-label="불러온 거래">
             ${locked && !gaveUp ? '<span class="stamp stamp-blue done-stamp">조정 완료</span>' : ""}
-            <p class="list-head"><span>불러온 거래 <span class="n">${items.length}</span>건</span>${gaveUp ? "" : '<button type="button" id="load" class="text-btn">새로 불러오기</button>'}</p>
+            <p class="list-head"><span>불러온 거래 <span class="n">${items.length}</span>건</span>${gaveUp || locked ? "" : '<button type="button" id="load" class="text-btn">새로 불러오기</button>'}</p>
+            <p class="privacy-note">이 목록은 나만 봐요 · 친구에게는 총액만 보여요</p>
             <ul class="list">${rows}</ul>
             ${action}
           </section>` : ""}`;

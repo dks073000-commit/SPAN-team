@@ -175,6 +175,7 @@
         <p class="seal-who">참전 <span class="n">${count}</span>명</p>
         <ul class="lineup">${players.map((p) => `
           <li class="player">${token(p.member_id, p.nickname, p.member_id === me ? "is-me" : "")}<span class="pname">${esc(p.nickname)}</span></li>`).join("")}</ul>
+        <p class="privacy-note">결과 날에도 친구에게는 총액만 보여요</p>
       </section>`;
     // 시연 흐름에서 참여한 사람은 아래 고정 탭 [내 기록 | 결과] 로 오가니 버튼을 겹쳐 두지 않는다
     const tabbed = isFlow && document.body.classList.contains("has-tabbar");

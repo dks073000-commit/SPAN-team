@@ -65,7 +65,10 @@
 .ds-row b { font-size: 15px; font-weight: 700; color: var(--ink, #1c1c21); }
 .ds-row span { font-size: 13px; color: var(--ink-soft, #5e5e68); }
 .ds-row:focus-visible { outline: 2px solid var(--ink, #1c1c21); outline-offset: -2px; border-radius: 6px; }
-.ds-close { width: 100%; margin-top: 16px; }
+.ds-close {
+  width: 100%; margin-top: 16px; min-height: 52px; border-radius: 14px; border: 1.5px solid var(--ink, #1c1c21);
+  background: #fff; color: var(--ink, #1c1c21); font: inherit; font-size: 16px; font-weight: 700; cursor: pointer;
+}
 
 /* 영수증 머리: 서비스 이름 (로고가 정해지면 이 자리) */
 main > .brand, .paper > .brand { display: flex; align-items: center; justify-content: center; gap: 7px; font-weight: 900; font-size: 18px; letter-spacing: -0.01em; margin: 0 0 18px; }
@@ -391,3 +394,6 @@ body:has(dialog[open]) { overflow: hidden; }
   background: rgba(255, 255, 255, 0.86);
 }
 .edit-btn { margin-top: 14px; }
+
+/* 10/6: 거래 목록 위 "총액만" 안내 (결과 카드 꼬리 대신) */
+.panel .privacy-note { margin: -4px 0 10px; font-size: 13px; line-height: 1.5; color: var(--ink-soft); }

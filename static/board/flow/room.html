@@ -84,7 +84,7 @@
     function shareBox() {
       return `
         <div class="share">
-          <input id="link" value="${F.esc(`${location.origin}/flow/r/${enc}`)}" readonly aria-label="초대 링크">
+          <input id="link" value="${F.esc(F.roomLink(code))}" readonly aria-label="초대 링크">
           <button type="button" class="small secondary" id="copy">링크 복사</button>
         </div>`;
     }

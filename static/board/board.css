@@ -522,3 +522,6 @@ mark {
   .counter { padding-top: 56px; padding-bottom: 56px; gap: 24px; }
   .receipt { padding: 32px 30px 30px; }
 }
+
+/* 10/6: 결과 카드 꼬리를 지운 대신, 기간 중 화면에 "총액만" 안내를 남긴다 */
+.privacy-note { margin: 14px 0 0; font-size: 13px; line-height: 1.5; color: var(--ink-soft); }
