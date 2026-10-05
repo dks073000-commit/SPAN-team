@@ -1,29 +1,23 @@
-/* 방 레인 전용 스타일 */
+/* 방 레인 전용 스타일. 색 · 글꼴 · 버튼 · 입력칸은 /static/board/common-proposal.css,
+   화면 배치(단계 표시, 참전 줄, 4자리)는 /static/board/flow/flow.css 를 그대로 쓴다. 여기에는 그 둘에 없는 것만 둔다 */
 
-.form label { display: block; margin-bottom: 12px; font-size: 14px; color: var(--muted); }
-.form label input, .form label select { margin-top: 4px; color: var(--text); }
-.form button { width: 100%; }
+/* 방 만들기 → 링크가 생긴 뒤 [방으로 가기] */
+.go { margin-top: 16px; }
 
-.row { display: flex; gap: 12px; }
-.row label { flex: 1; min-width: 0; }
+/* 방 홈: 참전 줄과 이름 고르기는 #board 안에서 바뀐다 */
+.rejoin-pick .back { display: block; width: fit-content; }
 
-.link-box { display: flex; gap: 8px; }
-.link-box input { flex: 1; min-width: 0; }
+/* 가짜 은행에서 계좌를 고르고 돌아온 뒤: 고른 계좌 한 장 (label.pick 과 같은 모양, 누르는 칸은 아님) */
+.bank-picked {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px; margin: 0 0 12px;
+  border: 1.5px solid var(--ink); border-radius: 12px;
+  font-weight: 700;
+}
+.bank-picked .pick-sub { display: block; font-size: 13px; font-weight: 500; color: var(--ink-soft); }
 
-.actions { display: flex; gap: 8px; }
-.actions .button { flex: 1; text-align: center; }
+/* 다른 계좌로 바꾸기: 기본 버튼 아래 가운데 글자 버튼 */
+.step-actions .change { justify-self: center; }
 
-.member { display: flex; justify-content: space-between; }
-.me { font-weight: 600; }
-.todo { border: 1px dashed var(--line); border-radius: 8px; padding: 8px 12px; }
-
-/* 다시 들어오기: 멤버 이름을 누를 수 있는 글자 버튼 */
-button.link { background: none; border: 0; padding: 0; color: inherit; font: inherit; text-decoration: underline; cursor: pointer; }
-
-/* 가상 계좌 연결 */
-.bank { border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin-bottom: 12px; }
-.bank p { margin: 0 0 8px; }
-.bank .small { font-size: 12px; margin: 8px 0 0; }
-.ok { color: var(--text); font-weight: 600; }
-.bank button.secondary { width: 100%; background: #fff; color: var(--accent); border: 1px solid var(--accent); }
-.form button:disabled { opacity: 0.4; cursor: not-allowed; }
+/* 참여 중 */
+#joined .me-meta { margin: 0 0 16px; }

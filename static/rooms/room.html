@@ -2,60 +2,71 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>버티기 · 방</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#e4e4e9">
+  <title>텅장방어전 · 방</title>
   <link rel="stylesheet" href="/static/common.css">
+  <link rel="stylesheet" href="/static/board/common-proposal.css">
+  <link rel="stylesheet" href="/static/board/flow/flow.css">
   <link rel="stylesheet" href="/static/rooms/rooms.css">
 </head>
 <body>
-<main>
-  <p id="loading" class="muted">불러오는 중...</p>
+<!-- 방 홈 · 참여. 화면 모양은 /flow/r/{code} (static/board/flow/room.html) 의 ① 정보 입력을 따른다.
+     ② 은행 연결 동의 · ③ 계좌 선택은 가짜 은행 화면(지출 레인)이다 -->
+<main id="page">
+  <p class="brand">텅장방어전</p>
+  <p id="loading" class="muted">불러오는 중이에요</p>
 
   <!-- 없는 방 -->
   <section id="not-found" hidden>
     <h1>방을 찾을 수 없어요</h1>
-    <p class="muted">링크가 맞는지 확인해 주세요. 방을 만든 친구에게 링크를 다시 받아도 됩니다.</p>
-    <p><a class="button" href="/">새 방 만들기</a></p>
+    <p class="muted">링크를 다시 확인해 주세요.</p>
+    <a class="button wide" href="/">새 방 만들기</a>
   </section>
 
-  <section id="room" hidden>
+  <section id="room" class="step-body" hidden>
+    <ol id="stepper" class="stepper" aria-label="참여 단계" hidden></ol>
     <h1 id="title"></h1>
-    <p id="period" class="muted"></p>
+    <p id="period" class="meta"></p>
 
-    <!-- 보드: 보드 레인의 API(/api/board/{code})로 그린다 -->
+    <!-- 참전 줄 (이름만, 10/3: 기간 중 방 홈은 참여자 이름만) + 다시 들어오기 이름 고르기 -->
     <section id="board"></section>
 
-    <!-- 참여 전 -->
+    <!-- 참여 전: ① 정보 입력 -->
     <form id="join" class="form" hidden>
-      <h2>참여하기</h2>
-      <label>닉네임 <input name="nickname" maxlength="20" required></label>
-      <label>내 예산 (원) <input name="budget" type="number" inputmode="numeric" min="1" step="1" placeholder="예: 100000" required></label>
-      <label>숫자 4자리 <input name="pin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="off" placeholder="다른 폰 · 브라우저에서 다시 들어올 때 써요" required></label>
+      <hr>
+      <label>닉네임 <input name="nickname" maxlength="20" placeholder="방에서 쓸 이름" autocomplete="off" required></label>
+      <label>이번 주 예산 (원) <input name="budget" type="number" inputmode="numeric" min="1" step="1" placeholder="예: 100000" autocomplete="off" required></label>
+      <label>숫자 4자리 <span class="label-sub">다른 기기에서 다시 들어올 때 써요</span>
+        <input name="pin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="new-password" placeholder="••••" required></label>
       <!-- 가상 계좌 연결: 가짜 은행 화면에서 동의 → 내 계좌 선택 → 이 페이지로 돌아온다 -->
-      <div class="bank">
-        <p id="bank-status" class="muted">가상 계좌를 연결해야 참여할 수 있어요.</p>
-        <button type="button" id="bank-connect" class="secondary">은행 연결하기</button>
-        <p class="muted small">시연용 가상 계좌입니다. 실제 은행 · 계좌와 연결되지 않습니다.</p>
+      <p id="bank-status" class="bank-picked" hidden></p>
+      <p class="note">시연용 가상 계좌예요. 실제 은행과 연결되지 않아요.</p>
+      <p id="error" class="danger" role="alert"></p>
+      <div class="step-actions">
+        <button type="submit" id="join-submit" class="wide" disabled hidden>참여하기</button>
+        <button type="button" id="bank-connect" class="wide">은행 연결하고 참여하기</button>
       </div>
-      <p id="error" class="danger"></p>
-      <button type="submit" id="join-submit" disabled>참여하기</button>
     </form>
 
-    <!-- 다시 들어오기: 위 목록에서 내 이름을 누르면 열린다 -->
-    <form id="rejoin" class="form" hidden>
-      <h2><span id="rejoin-name"></span>님, 다시 오셨네요</h2>
-      <label>참여할 때 정한 숫자 4자리 <input name="pin" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="off" required></label>
-      <p id="rejoin-error" class="danger"></p>
-      <button type="submit">들어가기</button>
-      <p><a id="rejoin-cancel" href="#">내가 아니에요</a></p>
+    <!-- 다시 들어오기: 참전 줄의 "이미 참여했어요" → 내 이름 → 숫자 4자리 -->
+    <form id="rejoin" class="form pin-form" hidden>
+      <a id="rejoin-cancel" class="text-btn back" href="#">이전으로</a>
+      <p class="pin-who"><span id="rejoin-token"></span><b id="rejoin-name"></b></p>
+      <h1 class="consent-title">숫자 4자리를 넣어 주세요</h1>
+      <p class="muted consent-sub">참여할 때 정한 번호예요</p>
+      <input name="pin" class="pin-input" type="password" inputmode="numeric" maxlength="4" pattern="[0-9]{4}" autocomplete="off" aria-label="숫자 4자리" required>
+      <p id="rejoin-error" class="danger" role="alert"></p>
+      <div class="step-actions"><button type="submit" class="wide">들어가기</button></div>
     </form>
 
     <!-- 참여 후 -->
     <section id="joined" hidden>
-      <p><span id="me" class="me"></span>님으로 참여 중</p>
-      <div class="actions">
-        <a id="add" class="button" href="#">지출 올리기</a>
-        <a id="go-board" class="button" href="#">보드</a>
+      <hr>
+      <p class="me-meta"><span id="me-token"></span><span><b id="me" class="me"></b>님으로 참여 중</span></p>
+      <div class="stack">
+        <a id="add" class="button wide" href="#">내 기록</a>
+        <a id="go-board" class="button secondary wide" href="#">결과</a>
       </div>
     </section>
   </section>
@@ -65,6 +76,31 @@
   const storageKey = `member_id:${code}`;
   const $ = id => document.getElementById(id);
   const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;"}[c]));
+
+  // 사람 토큰: 닉네임 첫 글자 + member_id 로 정한 색 (UI 가이드: (id − 1) % 6 + 1)
+  const token = (id, nickname, extra = "") =>
+    `<span class="token p${(Number(id) - 1) % 6 + 1}${extra ? " " + extra : ""}" aria-hidden="true">${esc(Array.from(String(nickname || "?"))[0])}</span>`;
+
+  // 날짜: toISOString 을 쓰지 않는다 (CLAUDE.md 시간대 규칙). "2026-10-02" → 10/2(금)
+  const WD = ["일", "월", "화", "수", "목", "금", "토"];
+  const parseDay = s => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+  const md = s => { const d = parseDay(s); return `${d.getMonth() + 1}/${d.getDate()}(${WD[d.getDay()]})`; };
+  function periodText(room) {
+    const t = new Date();
+    const today = new Date(t.getFullYear(), t.getMonth(), t.getDate());
+    const left = Math.round((parseDay(room.end_date) - today) / 86400000);
+    const when = `${md(room.start_date)} – ${md(room.end_date)}`;
+    return left <= 0 ? `${when} · 결과 공개` : `${when} · <b>D-${left}</b>`;
+  }
+
+  // 참여 세 단계: 정보 입력 → 은행 연결 → 계좌 선택. now 까지 지난 단계는 is-done
+  function renderStepper(now) {
+    const names = ["정보 입력", "은행 연결", "계좌 선택"];
+    $("stepper").innerHTML = names.map((n, i) => {
+      const cls = i + 1 < now ? "is-done" : i + 1 === now ? "is-now" : "";
+      return `<li class="${cls}"${i + 1 === now ? ' aria-current="step"' : ""}>${n}</li>`;
+    }).join("");
+  }
 
   function getMemberId() {
     try { return localStorage.getItem(storageKey); } catch { return null; }
@@ -98,7 +134,7 @@
       delete draft.state;
       setDraft(draft);
     } else {
-      bankError = "계좌 연결을 확인하지 못했어요. 은행 연결하기를 다시 눌러 주세요.";
+      bankError = "계좌 연결을 확인하지 못했어요. 은행 연결을 다시 눌러 주세요.";
     }
     history.replaceState(null, "", location.pathname);   // 새로고침해도 다시 처리하지 않게 주소를 깨끗이
   }
@@ -110,13 +146,34 @@
     for (const name of ["nickname", "budget", "pin"]) {
       if (draft[name] && !form[name].value) form[name].value = draft[name];
     }
-    if (draft.account) {
-      $("bank-status").textContent = `가상 계좌 연결됨 · ${draft.account.alias}`;
-      $("bank-status").className = "ok";
+    // 계좌를 고르고 돌아왔으면: 기본 버튼은 [참여하기], 은행 연결은 글자 버튼으로 (한 화면에 기본 버튼 하나)
+    const linked = Boolean(draft.account);
+    if (linked) {
+      $("bank-status").innerHTML = `<span>가상 계좌 연결됨<span class="pick-sub">${esc(draft.account.alias)}</span></span>`;
       $("bank-connect").textContent = "다른 계좌로 바꾸기";
+      $("bank-connect").className = "text-btn change";
     }
-    $("join-submit").disabled = !draft.account;
+    $("bank-status").hidden = !linked;
+    $("join-submit").hidden = !linked;
+    $("join-submit").disabled = !linked;
+    renderStepper(linked ? 3 : 1);
     $("error").textContent = bankError;
+  }
+
+  // 화면에 하나만: join(정보 입력) · pick(내 이름 고르기) · pin(숫자 4자리) · joined(참여 중)
+  function show(view) {
+    $("join").hidden = view !== "join";
+    $("rejoin").hidden = view !== "pin";
+    $("joined").hidden = view !== "joined";
+    $("board").hidden = view === "pin";
+    $("title").hidden = view === "pin" || view === "pick";
+    $("period").hidden = view === "pin" || view === "pick";
+    $("stepper").hidden = view !== "join";
+    const picking = view === "pick";
+    $("board").querySelectorAll(".lineup-wrap").forEach(el => { el.hidden = picking; });
+    $("board").querySelectorAll(".rejoin-pick").forEach(el => { el.hidden = !picking; });
+    // 참여 흐름 화면은 영수증 길이와 버튼 자리를 고정한다 (flow.css main.flow-step)
+    $("page").className = view === "joined" ? "" : "flow-step";
   }
 
   async function load() {
@@ -128,13 +185,13 @@
     }
     if (!res.ok) {
       $("loading").hidden = false;
-      $("loading").textContent = "불러오지 못했습니다. 잠시 후 새로고침해 주세요.";
+      $("loading").textContent = "불러오지 못했어요. 잠시 뒤 새로고침해 주세요.";
       return;
     }
     const room = await res.json();
-    document.title = `버티기 · ${room.name}`;
+    document.title = `${room.name} · 텅장방어전`;
     $("title").textContent = room.name;
-    $("period").textContent = `${room.start_date} ~ ${room.end_date}`;
+    $("period").innerHTML = periodText(room);
     $("room").hidden = false;
 
     // 저장된 id 가 이 방의 멤버가 아니면 (데모 방을 다시 넣은 경우 등) 지운다
@@ -144,39 +201,48 @@
 
     await renderBoard(room, me);
     if (me) showJoined(me);
-    else { $("join").hidden = false; fillJoinForm(); }
+    else { show("join"); fillJoinForm(); }
   }
 
   async function renderBoard(room, me) {
-    // TODO(보드 API): 김경은이 /api/board/{code} 응답 형식을 정하면, 응답으로 보드를 그리도록 바꾼다.
-    // 지금은 보드 API 가 없어서 멤버 목록만 보여 준다. 여기서 직접 계산하지 않는다.
-    // 아직 이 브라우저에서 참여 전이면, 4자리가 있는 멤버 이름을 눌러 다시 들어올 수 있다
-    const name = m => !me && m.has_pin
-      ? `<button type="button" class="link rejoin" data-id="${m.id}" data-name="${esc(m.nickname)}">${esc(m.nickname)}</button>`
-      : `<span>${esc(m.nickname)}</span>`;
-    const items = room.members.map(m =>
-      `<li class="member${me && m.id === me.id ? " me" : ""}">${name(m)}<span class="muted">예산 ${m.budget.toLocaleString()}원</span></li>`
+    // 기간 중 방 홈은 참여자 이름만 보여 준다 (10/3). 순위 · 금액은 마감일 결과 카드(보드 레인)에서.
+    // 아직 이 브라우저에서 참여 전이면, "이미 참여했어요" → 4자리가 있는 내 이름을 눌러 다시 들어올 수 있다
+    const canRejoin = !me && room.members.some(m => m.has_pin);
+    const players = room.members.map(m =>
+      `<li class="player">${token(m.id, m.nickname, me && m.id === me.id ? "is-me" : "")}<span class="pname">${esc(m.nickname)}</span></li>`
+    ).join("");
+    const empty = me ? "" : `<li class="player"><span class="token is-empty" aria-hidden="true">+</span><span class="pname">나</span></li>`;
+    const names = room.members.filter(m => m.has_pin).map(m =>
+      `<li><button type="button" class="pick-name rejoin" data-id="${m.id}" data-name="${esc(m.nickname)}">${token(m.id, m.nickname)}<span>${esc(m.nickname)}</span></button></li>`
     ).join("");
     $("board").innerHTML = `
-      <h2>멤버 ${room.members.length}명</h2>
-      ${room.members.length ? `<ul class="list">${items}</ul>` : `<p class="muted">아직 아무도 없어요. 첫 번째로 참여해 보세요.</p>`}
-      ${!me && room.members.some(m => m.has_pin) ? `<p class="muted">이미 참여했나요? 내 이름을 누르면 다시 들어갈 수 있어요.</p>` : ""}
-      <p class="todo muted">남은 예산 보드가 여기에 들어올 자리입니다 (보드 레인).</p>`;
+      <div class="lineup-wrap">
+        ${room.members.length
+          ? `<p class="who who-row"><span>참전 <span class="n">${room.members.length}</span>명</span>${canRejoin ? '<button type="button" id="to-rejoin" class="text-btn">이미 참여했어요</button>' : ""}</p>
+             <ul class="lineup compact">${players}${empty}</ul>`
+          : `<p class="who">아직 아무도 없어요. 첫 번째로 참전해요</p>`}
+      </div>
+      ${canRejoin ? `
+      <div class="rejoin-pick" hidden>
+        <button type="button" id="pick-back" class="text-btn back">이전으로</button>
+        <h1>내 이름을 골라 주세요</h1>
+        <p class="muted">참여할 때 정한 숫자 4자리로 다시 들어와요.</p>
+        <ul class="pick-names">${names}</ul>
+      </div>` : ""}`;
   }
 
   function showJoined(me) {
-    $("join").hidden = true;
-    $("rejoin").hidden = true;
+    show("joined");
     $("me").textContent = me.nickname;
+    $("me-token").innerHTML = token(me.id, me.nickname, "is-me");
     $("add").href = `/r/${code}/add`;
     $("go-board").href = `/r/${code}/board`;
-    $("joined").hidden = false;
   }
 
   $("join").addEventListener("submit", async e => {
     e.preventDefault();
     const form = e.target;
-    const button = form.querySelector("button");
+    const button = $("join-submit");
     $("error").textContent = "";
     button.disabled = true;
     try {
@@ -190,20 +256,20 @@
           fintech_use_num: (getDraft().account || {}).fintech_use_num,
         }),
       });
-      if (res.status === 409) { $("error").textContent = "이미 있는 닉네임이에요. 내 이름이면 위 목록에서 이름을 눌러 다시 들어오세요."; return; }
-      if (!res.ok) { $("error").textContent = "참여하지 못했습니다. 닉네임, 예산, 숫자 4자리, 계좌 연결을 확인해 주세요."; return; }
+      if (res.status === 409) { $("error").textContent = "같은 닉네임이 있어요. 나라면 위의 '이미 참여했어요'를 눌러 주세요."; return; }
+      if (!res.ok) { $("error").textContent = "참여하지 못했어요. 닉네임, 예산, 숫자 4자리, 계좌 연결을 확인해 주세요."; return; }
       const member = await res.json();
       setMemberId(member.id);
       clearDraft();
       await load();
     } catch {
-      $("error").textContent = "참여하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+      $("error").textContent = "참여하지 못했어요. 잠시 뒤 다시 눌러 주세요.";
     } finally {
       button.disabled = false;
     }
   });
 
-  // [은행 연결하기]: 입력값을 확인하고 넣어 둔 뒤 가짜 은행 화면으로 보낸다
+  // [은행 연결하고 참여하기]: 입력값을 확인하고 넣어 둔 뒤 가짜 은행 화면으로 보낸다
   $("bank-connect").addEventListener("click", () => {
     const form = $("join");
     if (!form.reportValidity()) return;
@@ -217,21 +283,22 @@
   let rejoinId = null;
 
   $("board").addEventListener("click", e => {
+    if (e.target.closest("#to-rejoin")) { show("pick"); return; }
+    if (e.target.closest("#pick-back")) { show("join"); return; }
     const b = e.target.closest(".rejoin");
     if (!b) return;
     rejoinId = b.dataset.id;
     $("rejoin-name").textContent = b.dataset.name;
+    $("rejoin-token").innerHTML = token(b.dataset.id, b.dataset.name);
     $("rejoin-error").textContent = "";
     $("rejoin").reset();
-    $("join").hidden = true;
-    $("rejoin").hidden = false;
+    show("pin");
     $("rejoin").pin.focus();
   });
 
   $("rejoin-cancel").addEventListener("click", e => {
     e.preventDefault();
-    $("rejoin").hidden = true;
-    $("join").hidden = false;
+    show("pick");
   });
 
   $("rejoin").addEventListener("submit", async e => {
@@ -256,7 +323,7 @@
       $("rejoin-error").textContent = typeof detail === "string" ? detail : "숫자 4자리를 확인해 주세요.";
       form.pin.value = "";
     } catch {
-      $("rejoin-error").textContent = "들어가지 못했습니다. 잠시 후 다시 시도해 주세요.";
+      $("rejoin-error").textContent = "들어가지 못했어요. 잠시 뒤 다시 눌러 주세요.";
     } finally {
       button.disabled = false;
     }
