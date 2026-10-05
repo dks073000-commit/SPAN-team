@@ -11,6 +11,8 @@ client = TestClient(app)
 
 needs_db = pytest.mark.skipif(not db.ping(), reason="DATABASE_URL 로 DB 에 접속할 수 없음")
 
+ACCOUNT = "BTG00000000000000000000A"  # 가짜 은행 계좌 A
+
 ROOM = {"name": "테스트 방", "start_date": "2026-10-02", "end_date": "2026-10-08"}
 
 
@@ -31,7 +33,7 @@ def test_rejects_blank_name():
 
 
 def test_rejects_bad_budget():
-    res = client.post("/api/rooms/demo/members", json={"nickname": "a", "budget": 0, "pin": "1234"})
+    res = client.post("/api/rooms/demo/members", json={"nickname": "a", "budget": 0, "pin": "1234", "fintech_use_num": ACCOUNT})
     assert res.status_code == 422
 
 
@@ -46,7 +48,7 @@ def test_create_room_has_defaults(room_code):
 
 @needs_db
 def test_join_room(room_code):
-    res = client.post(f"/api/rooms/{room_code}/members", json={"nickname": " 지수 ", "budget": 80000, "pin": "1234"})
+    res = client.post(f"/api/rooms/{room_code}/members", json={"nickname": " 지수 ", "budget": 80000, "pin": "1234", "fintech_use_num": ACCOUNT})
     assert res.status_code == 201
     member = res.json()
     assert member["nickname"] == "지수"
@@ -56,15 +58,15 @@ def test_join_room(room_code):
 
 @needs_db
 def test_duplicate_nickname(room_code):
-    client.post(f"/api/rooms/{room_code}/members", json={"nickname": "지수", "budget": 80000, "pin": "1234"})
-    res = client.post(f"/api/rooms/{room_code}/members", json={"nickname": "지수", "budget": 50000, "pin": "1234"})
+    client.post(f"/api/rooms/{room_code}/members", json={"nickname": "지수", "budget": 80000, "pin": "1234", "fintech_use_num": ACCOUNT})
+    res = client.post(f"/api/rooms/{room_code}/members", json={"nickname": "지수", "budget": 50000, "pin": "1234", "fintech_use_num": ACCOUNT})
     assert res.status_code == 409
 
 
 @needs_db
 def test_unknown_room():
     assert client.get("/api/rooms/nope99").status_code == 404
-    res = client.post("/api/rooms/nope99/members", json={"nickname": "a", "budget": 1000, "pin": "1234"})
+    res = client.post("/api/rooms/nope99/members", json={"nickname": "a", "budget": 1000, "pin": "1234", "fintech_use_num": ACCOUNT})
     assert res.status_code == 404
 
 
@@ -82,16 +84,17 @@ def test_pin_hash_roundtrip():
 
 @pytest.mark.parametrize("pin", ["123", "12345", "abcd", "", "12 4"])
 def test_rejects_bad_pin(pin):
-    res = client.post("/api/rooms/demo/members", json={"nickname": "a", "budget": 1000, "pin": pin})
+    res = client.post("/api/rooms/demo/members", json={"nickname": "a", "budget": 1000, "pin": pin, "fintech_use_num": ACCOUNT})
     assert res.status_code == 422
 
 
 def test_join_requires_pin():
-    assert client.post("/api/rooms/demo/members", json={"nickname": "a", "budget": 1000}).status_code == 422
+    res = client.post("/api/rooms/demo/members", json={"nickname": "a", "budget": 1000, "fintech_use_num": ACCOUNT})
+    assert res.status_code == 422
 
 
 def join(code, nickname="지수", pin="1234"):
-    return client.post(f"/api/rooms/{code}/members", json={"nickname": nickname, "budget": 80000, "pin": pin}).json()
+    return client.post(f"/api/rooms/{code}/members", json={"nickname": nickname, "budget": 80000, "pin": pin, "fintech_use_num": ACCOUNT}).json()
 
 
 def rejoin(code, member_id, pin):
@@ -133,3 +136,21 @@ def test_member_without_pin_cannot_rejoin(room_code):
     me = join(room_code)
     db.execute("update members set pin_hash = null where id = %s", (me["id"],))
     assert rejoin(room_code, me["id"], "1234").status_code == 403
+
+
+# 가상 계좌 연결 (10/5): 참여할 때 은행 연결 → 내 계좌 선택이 필수다
+
+
+@pytest.mark.parametrize("account", [None, "", "BTG-0001", "a" * 41])
+def test_join_requires_account(account):
+    body = {"nickname": "a", "budget": 1000, "pin": "1234"}
+    if account is not None:
+        body["fintech_use_num"] = account
+    assert client.post("/api/rooms/demo/members", json=body).status_code == 422
+
+
+@needs_db
+def test_join_saves_account(room_code):
+    me = join(room_code)
+    row = db.fetch_one("select fintech_use_num from members where id = %s", (me["id"],))
+    assert row["fintech_use_num"] == ACCOUNT
