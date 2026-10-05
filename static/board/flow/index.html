@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#e4e4e9">
+  <title>텅장방어전 · 방 만들기</title>
+  <link rel="stylesheet" href="/static/board/common-proposal.css">
+  <link rel="stylesheet" href="/static/board/flow/flow.css">
+</head>
+<body>
+<!-- 방 만들기 (시연용). 실제 화면은 방 레인 / (static/rooms/index.html).
+     화면의 일: 링크 만들기 하나. 설명 문장은 두지 않는다 -->
+<main>
+  <p class="brand">텅장방어전</p>
+  <h1 class="hook">이번 주 예산,<br>누가 끝까지 버틸까?</h1>
+  <div class="versus" aria-hidden="true">
+    <span class="token p1 is-me">나</span><span class="vs">VS</span>
+    <span class="token is-empty">?</span><span class="token is-empty">?</span><span class="token is-empty">?</span>
+  </div>
+  <hr>
+  <form id="create" class="form" novalidate>
+    <label>방 이름 <input name="name" maxlength="40" placeholder="예: 10월 둘째 주 방어전" autocomplete="off"></label>
+    <div class="two">
+      <label>시작 <input type="date" name="start" value="2026-10-02"></label>
+      <label>마감 <input type="date" name="end" value="2026-10-08"></label>
+    </div>
+    <p class="danger" id="error" role="alert"></p>
+    <button type="submit">링크 만들기</button>
+  </form>
+</main>
+<script src="/static/board/flow/store.js"></script>
+<script>
+  (function () {
+    "use strict";
+    Flow.toolbar(null);
+    const form = document.getElementById("create");
+    const error = document.getElementById("error");
+    form.addEventListener("submit", (ev) => {
+      ev.preventDefault();
+      // form.name 은 폼 자신의 name 속성이라 입력칸은 elements 로 꺼낸다
+      const f = form.elements;
+      const name = f.name.value.trim();
+      const start = f.start.value;
+      const end = f.end.value;
+      f.name.removeAttribute("aria-invalid");
+      f.end.removeAttribute("aria-invalid");
+      if (!name) { error.textContent = "방 이름을 넣어 주세요."; f.name.setAttribute("aria-invalid", "true"); f.name.focus(); return; }
+      if (!start || !end) { error.textContent = "시작일과 마감일을 골라 주세요."; return; }
+      if (end < start) { error.textContent = "마감일이 시작일보다 빨라요."; f.end.setAttribute("aria-invalid", "true"); return; }
+      const code = Flow.createRoom({ name, start_date: start, end_date: end });
+      location.href = `/flow/r/${code}?new=1`;
+    });
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>텅장방어전 UI 가이드</title>
+  <!-- 공용 스타일 교체안(common-proposal.css) + 흐름 화면 배치(flow/flow.css) 로만 그린다. 아래 <style> 은 가이드 페이지 배치용이다 -->
+  <link rel="stylesheet" href="/static/board/common-proposal.css">
+  <link rel="stylesheet" href="/static/board/flow/flow.css">
+  <style>
+    main.doc { max-width: 720px; }
+    .doc ol.rules { padding-left: 1.3em; margin: 0; display: grid; gap: 8px; }
+    .swatches li { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 12px; align-items: center; }
+    .chip { width: 40px; height: 28px; border-radius: 6px; border: 1px solid rgba(28, 28, 33, 0.12); }
+    .swatches .use { font-size: 14px; color: var(--ink-soft); }
+    .row-demo { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 12px; }
+    .type-kr { font-size: 22px; font-weight: 900; margin: 0 0 4px; }
+    .type-num { font-size: 26px; margin: 0; }
+    .say li { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .say .no { color: var(--ink-soft); text-decoration: line-through; text-decoration-color: var(--stamp-red); }
+    .say-head { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; font-size: 13px; color: var(--ink-soft); }
+    pre { white-space: pre-wrap; word-break: keep-all; font-size: 13px; line-height: 1.6; background: #f4f4f6; border-radius: 10px; padding: 14px; margin: 0; }
+    code { font-size: 0.92em; background: #f1f1f4; border-radius: 4px; padding: 0 4px; }
+    .line { display: grid; grid-template-columns: 2.2em minmax(0, 1fr) auto; gap: 8px; align-items: center; }
+    .line .who { display: flex; align-items: center; gap: 8px; }
+    .line .token { font-size: 12px; box-shadow: 1.5px 1.5px 0 var(--ink); }
+    .medal { width: 30px; height: 30px; font-size: 14px; }
+    .flag-ic { width: 18px; height: 18px; color: var(--stamp-gray); }
+
+    .screens-title { max-width: 1240px; margin: 56px auto 4px; padding: 0 4px; }
+    .screens-title p { color: var(--ink-soft); font-size: 14px; }
+    .screens { max-width: 1240px; margin: 0 auto; display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 28px 24px; align-items: start; }
+    .screens .paper { width: 100%; max-width: 380px; margin: 7px auto; }
+    .screen-name { text-align: center; font-size: 13px; color: var(--ink-soft); margin: 0 0 6px; }
+    .screen-name a { color: inherit; }
+    /* 가이드 안 예시 화면도 실제처럼 같은 길이 (참여 흐름 세 단계) */
+    .paper.flow-step { min-height: 714px; display: flex; flex-direction: column; }
+    .paper.flow-step .step-body { flex: 1; display: flex; flex-direction: column; }
+    .paper.flow-step .step-actions { margin-top: auto; padding-top: 18px; }
+    /* 가이드 안 탭 예시는 화면 아래에 붙이지 않고 제자리에 */
+    .guide-tabbar { position: static; border: 1px solid #e6e6ea; border-radius: 14px; box-shadow: none; padding: 6px; }
+  </style>
+</head>
+<body>
+<main class="doc">
+  <h1>텅장방어전 UI 가이드</h1>
+  <p class="muted">모든 화면은 회색 계산대 위에 놓인 흰 영수증 한 장이에요. 실제로 눌러 보는 전체 흐름은 <a href="/flow"><code>/flow</code></a> 에 있어요.</p>
+  <p class="note">10/4 기준. 서비스 이름 "텅장방어전"(로고는 투표 전이라 A안 임시) · 미제출 대신 <b>미확인 · 항복</b> · 기간 중 순위 없음(마감일 결과 카드) · 참여할 때 <b>은행 연결 → 계좌 선택</b> · 1 · 2 · 3등 <b>메달</b>.</p>
+
+  <hr>
+  <h2>다섯 가지 규칙</h2>
+  <ol class="rules">
+    <li><b>한 화면은 영수증 한 장, 큰 글자 하나 + 기본 버튼 하나.</b> 설명 문장은 쓰지 않고 점선으로 구획을 나눠요.</li>
+    <li><b>형광펜은 "나"에게만.</b> <mark>69,000원</mark> 처럼 내 숫자와 내 줄에만 칠해요.</li>
+    <li><b>상태는 도장, 사람은 색.</b> 초과 · 완주 · 미확인 · 항복은 글자 도장으로, 사람마다 정해진 색은 "누구인지"에만 써요.</li>
+    <li><b>글꼴은 하나.</b> Noto Sans KR 로 글과 숫자를 모두 쓰고, 금액과 % 는 <code>.n</code> 으로 감싸 자리를 맞춰요.</li>
+    <li><b>말투는 해요체, 숫자 먼저.</b> 초과하거나 항복한 친구를 놀리지 않고 다시 버틸 이유를 줘요.</li>
+  </ol>
+
+  <hr>
+  <h2>색</h2>
+  <ul class="list swatches">
+    <li><span class="chip" style="background:#e4e4e9"></span><span><b>계산대</b> <code>--counter</code></span><span class="use">화면 바탕</span></li>
+    <li><span class="chip" style="background:#ffffff"></span><span><b>종이</b> <code>--paper</code></span><span class="use">영수증, 입력칸</span></li>
+    <li><span class="chip" style="background:#1c1c21"></span><span><b>잉크</b> <code>--ink</code></span><span class="use">글자, 기본 버튼</span></li>
+    <li><span class="chip" style="background:#5e5e68"></span><span><b>흐린 잉크</b> <code>--ink-soft</code></span><span class="use">설명, 보조 글</span></li>
+    <li><span class="chip" style="background:#e4ff4a"></span><span><b>형광펜</b> <code>--hl</code></span><span class="use">"나"에게만</span></li>
+    <li><span class="chip" style="background:#cf2338"></span><span><b>빨간 인주</b> <code>--stamp-red</code></span><span class="use">초과, 오류, 항복 버튼</span></li>
+    <li><span class="chip" style="background:#7a7a85"></span><span><b>회색 인주</b> <code>--stamp-gray</code></span><span class="use">미확인, 항복, 봉인, 자동 제외</span></li>
+    <li><span class="chip" style="background:#2647b8"></span><span><b>파란 인주</b> <code>--stamp-blue</code></span><span class="use">완주, 조정 완료</span></li>
+    <li><span class="chip" style="background:linear-gradient(90deg,#f2c94c 33%,#d3d6dc 33% 66%,#e3a873 66%)"></span><span><b>메달</b> <code>--gold --silver --bronze</code></span><span class="use">1 · 2 · 3등만</span></li>
+    <li><span class="chip" style="background:linear-gradient(90deg,#ff6b5e 16%,#4d7cff 16% 33%,#2fcf9f 33% 50%,#ffb020 50% 66%,#a77bff 66% 83%,#ff6fb5 83%)"></span><span><b>사람 색</b> <code>--p1 ~ --p6</code></span><span class="use">사람 토큰만 (참여 순서로)</span></li>
+  </ul>
+  <p class="muted">예전 변수(<code>--bg --text --muted --line --accent --danger</code>)도 그대로 써요. 지금 화면 코드는 고치지 않아도 돼요.</p>
+
+  <hr>
+  <h2>글꼴</h2>
+  <p class="type-kr">이번 주 예산, 누가 끝까지 버틸까?</p>
+  <p class="type-num n">69,000원 · 31% · D-4</p>
+  <p class="muted">Noto Sans KR 하나. 숫자도 같은 글꼴이고 <code>.n</code> 이 굵기와 자리 맞춤(tabular-nums)을 넣어요.</p>
+
+  <hr>
+  <h2>버튼</h2>
+  <div class="row-demo">
+    <button type="button">참여하기</button>
+    <button type="button" class="secondary">결과 카드</button>
+    <button type="button" class="small secondary">링크 복사</button>
+    <button type="button" disabled>조정 완료</button>
+    <button type="button" class="small danger-line">항복하기</button>
+  </div>
+  <p class="muted">기본 버튼은 한 화면에 하나, 영수증 맨 아래. 나머지는 <code>.secondary</code> 나 글자 링크. 되돌릴 수 없는 일(항복)은 <code>.danger-line</code> 이고 확인 화면을 한 번 거쳐요.</p>
+
+  <hr>
+  <h2>입력칸과 계좌 고르기</h2>
+  <div class="form">
+    <label>닉네임 <input placeholder="방에서 쓸 이름"></label>
+    <label>이번 주 예산 (원) <input inputmode="numeric" value="500" aria-invalid="true"></label>
+    <p class="danger">예산은 1,000원 이상으로 넣어 주세요.</p>
+    <div class="accounts">
+      <label class="pick"><input type="radio" name="g1" checked><span>가상은행 생활비 통장<span class="pick-sub">1002-***-**1201</span></span></label>
+      <label class="pick"><input type="radio" name="g1"><span>가상은행 용돈 통장<span class="pick-sub">1002-***-**1202</span></span></label>
+    </div>
+  </div>
+  <p class="muted">오류 칸에는 <code>aria-invalid="true"</code> 와 아래 <code>.danger</code> 한 줄. 계좌는 <code>label.pick</code> 카드로 <b>은행 이름 + 가린 계좌번호</b>(등록계좌조회 모양)를 보여 줘요.</p>
+
+  <hr>
+  <h2>사람 토큰과 참전 줄</h2>
+  <ul class="lineup">
+    <li class="player"><span class="token p1">짠</span><span class="pname">짠돌이</span></li>
+    <li class="player"><span class="token p2">카</span><span class="pname">카페중독</span></li>
+    <li class="player"><span class="token p3">큰</span><span class="pname">큰손</span></li>
+    <li class="player"><span class="token p5 is-me">발</span><span class="pname">발표자</span></li>
+    <li class="player"><span class="token is-empty">+</span><span class="pname">나</span></li>
+  </ul>
+  <p class="muted" style="margin-top:12px"><code>.token .p1~.p6</code> 은 닉네임 첫 글자 스티커(검은 테두리 + 각진 그림자). 색은 member_id 로 <code>(id − 1) % 6 + 1</code>. 나는 <code>.is-me</code>(형광 고리), 항복은 <code>.is-quit</code>(흑백), 빈자리는 <code>.is-empty</code>.</p>
+
+  <hr>
+  <h2>도장 · 메달 · 꼬리표</h2>
+  <div class="row-demo">
+    <span class="stamp stamp-red">초과</span>
+    <span class="stamp stamp-blue">완주</span>
+    <span class="stamp stamp-blue">버티기 장인</span>
+    <span class="stamp stamp-gray">항복</span>
+    <span class="stamp stamp-gray">봉인</span>
+    <span class="tag">미확인</span>
+  </div>
+  <ul class="list">
+    <li class="line"><span class="medal medal-gold">1</span><span class="who"><span class="token p1">짠</span>짠돌이</span><span class="n">22%</span></li>
+    <li class="line is-me"><span class="medal medal-silver">2</span><span class="who"><span class="token p5 is-me">발</span>발표자 (나)</span><span class="n">31%</span></li>
+    <li class="line"><span class="medal medal-bronze">3</span><span class="who"><span class="token p2">카</span>카페중독</span><span class="n">65%</span></li>
+    <li class="line"><span class="n">4</span><span class="who"><span class="token p3">큰</span>큰손 <span class="tag">미확인</span></span><span class="n">121%</span></li>
+    <li class="line"><svg class="flag-ic" viewBox="0 0 16 16" aria-hidden="true"><path d="M3.5 15V1.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M4.3 2.2h8.6l-2.2 3.2 2.2 3.2H4.3z" fill="#fff" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></svg><span class="who"><span class="token p4 is-quit">포</span>포기각</span><span class="stamp stamp-gray">항복</span></li>
+  </ul>
+  <p class="muted">메달 <code>.medal</code> 은 금 · 은 · 동 동전 + 안쪽 점선 링(그림자 없음)이라 사람 토큰과 구분돼요. 4등부터는 숫자. <b>미확인</b>은 조정 전 금액이라는 <code>.tag</code>, <b>항복</b>은 깃발 + 회색 도장이고 금액은 보여주지 않아요.</p>
+
+  <hr>
+  <h2>남은 예산 막대 (내 페이지)</h2>
+  <div class="gauge-row"><span>남은 예산</span><b>69%</b></div>
+  <div class="gauge" data-level="ok" style="--left:69%"><span></span></div>
+  <div class="gauge-row" style="margin-top:12px"><span>남은 예산</span><b>32%</b></div>
+  <div class="gauge" data-level="warn" style="--left:32%"><span></span></div>
+  <div class="gauge-row" style="margin-top:12px"><span>남은 예산</span><b>0%</b></div>
+  <div class="gauge" data-level="over"><span></span></div>
+  <p class="muted" style="margin-top:12px"><code>.gauge</code> 의 <code>data-level</code>: ok(50% 이상, 민트) · warn(20~50%, 호박) · danger(20% 미만, 코랄) · over(초과, 빨간 빗금). 나만 보는 화면에만 써요.</p>
+
+  <hr>
+  <h2>참여 흐름 (단계 표시 · 계좌 조회 동의)</h2>
+  <ol class="stepper"><li class="is-done">정보 입력</li><li class="is-now" aria-current="step">은행 연결</li><li>계좌 선택</li></ol>
+  <ul class="scope">
+    <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><div><b>텅장방어전이 보는 것</b><span>날짜 · 금액 · 가게 이름</span></div></li>
+    <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><div><b>텅장방어전이 못 하는 것</b><span>송금 · 결제 · 비밀번호 저장</span></div></li>
+    <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3.2 3.2 0 0 1 0 6.3M18 14.3c1.8.8 3 2.6 3 4.7"/></svg></span><div><b>친구가 보는 것</b><span>총액과 순위만</span></div></li>
+    <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span><div><b>지우는 때</b><span>방이 끝나면 바로</span></div></li>
+  </ul>
+  <p class="muted" style="margin-top:12px">참여는 실제 오픈뱅킹 순서: 정보 입력 → 은행 연결(사용자 인증 · 동의) → 계좌 선택. 세 단계는 <b>휴대폰 한 화면 안에 영수증 전체가 들어오는 같은 길이, 기본 버튼은 맨 아래</b>(<code>flow-step</code>, <code>.step-actions</code>). 동의 화면은 <code>.scope</code> 목록으로 <b>주어를 붙여</b>(텅장방어전이 보는 것 · 못 하는 것 · 친구가 보는 것 · 지우는 때) 한 줄씩 짧게 쓰고(기간은 제목 아래 한 줄), 사람 색 · VS 같은 게임 요소는 넣지 않아요. [필수] 체크 전에는 버튼을 막아요.</p>
+
+  <hr>
+  <h2>다시 들어오기 (닉네임 + 숫자 4자리)</h2>
+  <div class="form">
+    <label>숫자 4자리 <span class="label-sub">다른 기기에서 다시 들어올 때 써요</span>
+      <input type="password" inputmode="numeric" maxlength="4" placeholder="••••"></label>
+  </div>
+  <p class="muted"><b>회원가입이 아니에요.</b> 연락처 · 실명을 받지 않고, 그 방 안에서만 쓰는 번호예요(when2meet · 오픈채팅방 비밀번호와 같은 방식). 참여할 때 한 번 정하고, 같은 브라우저면 다시 묻지 않아요. 다른 브라우저(카톡 → 크롬)에서는 <b>"이미 참여했어요" → 내 이름 고르기 → 4자리</b>. 5번 틀리면 30초 잠깐 막아요. 실제 서비스는 서버에서 해시해 저장해요.</p>
+
+  <hr>
+  <h2>아래 고정 탭 (참여한 뒤)</h2>
+  <nav class="tabbar guide-tabbar" aria-label="예시">
+    <a href="#" aria-current="page"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h12v18l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5L6 21z"/><path d="M9 8h6M9 12h6M9 16h3"/></svg><span>내 기록</span></a>
+    <a href="#"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="14" r="6"/><path d="M8.5 3h7l-2 6.2M10.5 9.2L8.5 3"/><path d="M12 11.5v5"/></svg><span>결과 <em><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>D-4</em></span></a>
+  </nav>
+  <p class="muted" style="margin-top:12px">참여한 뒤에는 화면 아래 <code>.tabbar</code> 두 칸으로만 오가요. 방 홈은 참여 전에만 쓰고, 이미 참여한 사람이 링크를 열면 바로 <b>내 기록</b>으로 가요. 결과 탭은 마감 전엔 자물쇠와 D-day. 친구 초대는 내 기록 아래 글자 버튼으로.</p>
+
+  <hr>
+  <h2>안내 띠</h2>
+  <p class="note">시연용 가상은행이에요. 실제 은행과 연결되지 않아요.</p>
+  <p class="muted">꼭 알려야 하지만 방해되면 안 되는 문장만 <code>.note</code>. 화면마다 넣지 않아요.</p>
+
+  <hr>
+  <h2>말투</h2>
+  <div class="say-head"><span>이렇게</span><span>이렇게 말고</span></div>
+  <ul class="list say">
+    <li><span>이번 주 예산, 누가 끝까지 버틸까?</span><span class="no">친구들과 예산을 걸고 버티는 서비스입니다</span></li>
+    <li><span>69,000원 남았어요</span><span class="no">잔여 예산: 69,000원</span></li>
+    <li><span>예산을 15,000원 넘겼어요</span><span class="no">예산 초과! 실패</span></li>
+    <li><span>항복했어요</span><span class="no">탈락! 포기자</span></li>
+    <li><span>조정을 마치면 내 결산이 나와요</span><span class="no">미확인 상태입니다</span></li>
+    <li><span>링크를 다시 확인해 주세요</span><span class="no">오류가 발생했습니다</span></li>
+  </ul>
+
+  <hr>
+  <h2>적용 방법</h2>
+  <p><b>안정훈</b>: <code>static/common.css</code> 를 <code>static/board/common-proposal.css</code> 내용으로 바꾸면 변수와 클래스 이름이 같아서 지금 화면은 그대로 동작해요. 흐름 화면 배치(단계 표시, 동의 표, 계좌 목록)는 <code>static/board/flow/flow.css</code> 에 있어요.</p>
+  <p><b>각자 화면</b>: <code>/flow</code> 의 같은 화면을 보고, Claude Code 에 아래를 붙여 넣으면 돼요. 옮기는 법은 <code>static/board/flow/README.md</code>.</p>
+  <pre>static/board/ui-guide.html, static/board/flow/README.md, static/common.css 를 읽고,
+/flow 의 같은 화면을 기준으로 내 레인 화면을 맞춰 줘.
+새 색이나 글꼴을 만들지 말고 가이드의 것(button, .secondary, .small, .danger-line, .note, .stamp, .tag,
+.medal, .token, .lineup, .gauge, label.pick, .stepper, .consent, .n, mark, .is-me, ul.list, hr)만 써.
+한 화면에 큰 글자 하나와 기본 버튼 하나, 형광펜은 "나"에게만, 설명 문장은 빼고, 말투는 해요체로 숫자 먼저.</pre>
+</main>
+
+<div class="screens-title">
+  <h2>화면에 적용하면</h2>
+  <p>같은 스타일로 그린 예시예요. 닉네임과 금액은 예시 데이터예요. 이름을 누르면 실제로 눌러 보는 화면이 열려요.</p>
+</div>
+<div class="screens">
+  <div>
+    <p class="screen-name"><a href="/flow">방 만들기 <code>/</code></a></p>
+    <div class="paper">
+      <p class="brand">텅장방어전</p>
+      <h1 class="hook">이번 주 예산,<br>누가 끝까지 버틸까?</h1>
+      <div class="versus" aria-hidden="true"><span class="token p1 is-me">나</span><span class="vs">VS</span><span class="token is-empty">?</span><span class="token is-empty">?</span><span class="token is-empty">?</span></div>
+      <hr>
+      <div class="form">
+        <label>방 이름 <input placeholder="예: 10월 둘째 주 방어전"></label>
+        <div class="two">
+          <label>시작 <input type="date" value="2026-10-02"></label>
+          <label>마감 <input type="date" value="2026-10-08"></label>
+        </div>
+        <button type="button" class="wide">링크 만들기</button>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <p class="screen-name"><a href="/flow/r/demo">참여 ① 정보 입력 <code>/r/{code}</code></a></p>
+    <div class="paper flow-step">
+      <p class="brand">텅장방어전</p>
+      <ol class="stepper"><li class="is-now">정보 입력</li><li>은행 연결</li><li>계좌 선택</li></ol>
+      <div class="step-body">
+        <h1>데모 방</h1>
+        <p class="meta">10/2(금) – 10/8(목) · <b>D-4</b></p>
+        <p class="who">참전 <span class="n">4</span>명</p>
+        <ul class="lineup">
+          <li class="player"><span class="token p1">짠</span><span class="pname">짠돌이</span></li>
+          <li class="player"><span class="token p2">카</span><span class="pname">카페중독</span></li>
+          <li class="player"><span class="token p3">큰</span><span class="pname">큰손</span></li>
+          <li class="player"><span class="token p4">포</span><span class="pname">포기각</span></li>
+          <li class="player"><span class="token is-empty">+</span><span class="pname">나</span></li>
+        </ul>
+        <hr>
+        <div class="form">
+          <label>닉네임 <input placeholder="방에서 쓸 이름"></label>
+          <label>이번 주 예산 (원) <input inputmode="numeric" placeholder="예: 100000"></label>
+          <label>숫자 4자리 <span class="label-sub">다른 기기에서 다시 들어올 때 써요</span><input type="password" inputmode="numeric" maxlength="4" placeholder="••••"></label>
+        </div>
+        <div class="step-actions"><button type="button" class="wide">은행 연결하고 참여하기</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <p class="screen-name">참여 ② 은행 연결 동의</p>
+    <div class="paper flow-step">
+      <p class="brand">텅장방어전</p>
+      <ol class="stepper"><li class="is-done">정보 입력</li><li class="is-now">은행 연결</li><li>계좌 선택</li></ol>
+      <div class="step-body">
+        <div class="link-visual" aria-hidden="true">
+          <span class="lv-end"><span class="lv-ic lv-app"></span><small>텅장방어전</small></span>
+          <span class="lv-line"><span class="lv-tag"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>조회만</span></span>
+          <span class="lv-end"><span class="lv-ic lv-bank"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10h18L12 4 3 10z"/><path d="M5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 20h18"/></svg></span><small>가상은행</small></span>
+        </div>
+        <h1 class="consent-title">계좌 조회를 허락해 주세요</h1>
+        <p class="muted consent-sub">10/2(금) ~ 10/8(목) 출금 내역만 봐요</p>
+        <ul class="scope">
+              <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><div><b>텅장방어전이 보는 것</b><span>날짜 · 금액 · 가게 이름</span></div></li>
+              <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><div><b>텅장방어전이 못 하는 것</b><span>송금 · 결제 · 비밀번호 저장</span></div></li>
+              <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3.2 3.2 0 0 1 0 6.3M18 14.3c1.8.8 3 2.6 3 4.7"/></svg></span><div><b>친구가 보는 것</b><span>총액과 순위만</span></div></li>
+              <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span><div><b>지우는 때</b><span>방이 끝나면 바로</span></div></li>
+            </ul>
+        <details class="terms"><summary>동의 내용 자세히 보기</summary><dl>
+          <div><dt>정보를 받는 곳</dt><dd>텅장방어전 (SPAN 팀)</dd></div>
+          <div><dt>쓰는 목적</dt><dd>이 방의 예산 사용률 계산과 결과 카드</dd></div>
+          <div><dt>받는 항목</dt><dd>출금 날짜 · 시간, 금액, 가게 이름</dd></div>
+          <div><dt>보관 기간</dt><dd>방 마감 후 바로 삭제</dd></div>
+        </dl></details>
+        <label class="agree"><input type="checkbox"><span><b>[필수]</b> 위 내용으로 계좌 조회에 동의해요</span></label>
+        <div class="step-actions"><button type="button" class="wide" disabled>동의하고 계좌 불러오기</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <p class="screen-name">참여 ③ 계좌 선택</p>
+    <div class="paper flow-step">
+      <p class="brand">텅장방어전</p>
+      <ol class="stepper"><li class="is-done">정보 입력</li><li class="is-done">은행 연결</li><li class="is-now">계좌 선택</li></ol>
+      <div class="step-body">
+        <h1>이 방에서 쓸 계좌를<br>골라 주세요</h1>
+        <p class="muted">연결된 계좌 <span class="n">3</span>개 · 고른 계좌의 출금 내역만 불러와요</p>
+        <div class="accounts">
+          <label class="pick"><input type="radio" name="g2" checked><span>가상은행 생활비 통장<span class="pick-sub">1002-***-**1201</span></span></label>
+          <label class="pick"><input type="radio" name="g2"><span>가상은행 용돈 통장<span class="pick-sub">1002-***-**1202</span></span></label>
+          <label class="pick"><input type="radio" name="g2"><span>가상은행 알바비 통장<span class="pick-sub">1002-***-**1203</span></span></label>
+        </div>
+        <div class="step-actions"><button type="button" class="wide">이 계좌로 참여하기</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div>
+    <p class="screen-name"><a href="/flow/r/demo/me">내 페이지 <code>/r/{code}/add</code></a></p>
+    <div class="paper">
+      <p class="brand">텅장방어전</p>
+      <p class="meta me-meta"><span class="token p5 is-me">발</span><span>발표자 · 데모 방 · <b>D-4</b></span></p>
+      <p class="kicker">목표까지</p>
+      <h1 class="money"><mark><span class="n">69,000</span>원</mark> 남았어요</h1>
+      <p class="sub"><span><span class="n">100,000</span>원 중 <span class="n">31,000</span>원 썼어요</span><span class="tag">미확인</span></p>
+      <div class="gauge-row"><span>남은 예산</span><b>69%</b></div>
+      <div class="gauge" data-level="ok" style="--left:69%"><span></span></div>
+      <p class="pace">남은 <span class="n">5</span>일 · 하루 <span class="n">13,800</span>원까지 OK</p>
+      <section class="panel">
+        <p class="list-head"><span>불러온 거래 <span class="n">8</span>건</span><span class="text-btn">새로 불러오기</span></p>
+        <ul class="list">
+          <li class="tx"><span class="what">분식집</span><span class="amt"><span class="n">24,000</span>원</span>
+            <span class="tx-sub"><span class="when">10/5(월)</span><span class="when">내 몫 <span class="n">8,000</span>원</span></span>
+            <span class="ctl"><select aria-label="같이 낸 사람"><option>3명이서</option></select><label class="toggle"><input type="checkbox"><span>제외</span></label></span></li>
+          <li class="tx is-out"><span class="what">간편결제충전</span><span class="amt"><span class="n">20,000</span>원</span>
+            <span class="tx-sub"><span class="when">10/4(일)</span><span class="tag">충전·내 계좌 이체일 수 있어요</span></span>
+            <span class="ctl"><select aria-label="같이 낸 사람"><option>나만</option></select><label class="toggle"><input type="checkbox" checked><span>제외</span></label></span></li>
+        </ul>
+        <div style="margin-top:14px"><button type="button" class="wide">조정 완료</button></div>
+      </section>
+      <hr>
+      <p class="links"><a href="#">결과 카드 · D-4</a><a href="#">방 홈</a><span class="text-btn danger-text">항복하기</span></p>
+    </div>
+  </div>
+
+  <div>
+    <p class="screen-name">항복 누른 뒤 확인</p>
+    <div class="paper">
+      <p class="brand">텅장방어전</p>
+      <h1>정말 항복할까요?</h1>
+      <p class="muted">되돌릴 수 없어요. 결과 카드에는 깃발만 남아요.</p>
+      <hr>
+      <div class="stack">
+        <button type="button" class="wide">계속 버티기</button>
+        <button type="button" class="danger-line wide">항복하기</button>
+      </div>
+    </div>
+    <p class="screen-name" style="margin-top:22px"><a href="/r/sample/board?sample&amp;preview=1">결과 카드 · 봉인 화면은 실제 화면 보기 →</a></p>
+  </div>
+</div>
+</body>
+</html>
