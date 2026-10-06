@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="/static/board/flow/flow.css">
 </head>
 <body>
-<!-- 내 기록 (지출 레인). 시안: /flow/r/{code}/me (static/board/flow/me.html)
+<!-- 내 기록 (지출 레인). 모양은 UI 가이드(static/board/ui-guide.html) · flow.css 그대로
      화면의 일: 남은 돈을 보고, 다음 할 일 하나(불러오기 → 조정 완료)를 한다. 다른 사람 순위는 없다 (10/3)
      본인 확인: 참여 때 정한 숫자 4자리를 한 번 묻고 이 브라우저에 기억한다. API 는 X-Member-Pin 헤더로 확인한다 (10/6) -->
 <main id="page" aria-live="polite"><p class="muted">불러오는 중이에요</p></main>
@@ -371,7 +371,7 @@
         <a href="/r/${enc}/board">${ICON.result}<span>결과${info.result_open ? "" : ` <em>${ICON.lock}D-${info.days_left}</em>`}</span></a>`;
     }
 
-    // 바닥글: 모든 화면 맨 아래 개인정보 처리방침 링크 (보드 레인 store.js footer 와 같은 모양)
+    // 바닥글: 모든 화면 맨 아래 개인정보 처리방침 링크 (.site-foot, 모든 화면 같은 모양)
     const foot = document.createElement("footer");
     foot.className = "site-foot";
     foot.innerHTML = '<a class="sf-privacy" href="/flow/privacy">개인정보 처리방침</a>'
@@ -383,5 +383,7 @@
     else load();
   })();
 </script>
+<!-- 발표 모드(/flow 로 들어온 브라우저)에서만 위에 시연 막대를 띄운다. 일반 사용자에게는 아무것도 안 한다 -->
+<script src="/static/board/flow/demo-bar.js" defer></script>
 </body>
 </html>

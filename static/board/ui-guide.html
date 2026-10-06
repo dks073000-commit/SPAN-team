@@ -44,7 +44,7 @@
 <body>
 <main class="doc">
   <h1>텅장방어전 UI 가이드</h1>
-  <p class="muted">모든 화면은 회색 계산대 위에 놓인 흰 영수증 한 장이에요. 실제로 눌러 보는 전체 흐름은 <a href="/flow"><code>/flow</code></a> 에 있어요.</p>
+  <p class="muted">모든 화면은 회색 계산대 위에 놓인 흰 영수증 한 장이에요. 실제로 눌러 보려면 <a href="/flow"><code>/flow</code></a> (실제 서비스 + 발표용 시연 막대).</p>
   <p class="note">10/4 기준. 서비스 이름 "텅장방어전"(로고는 투표 전이라 A안 임시) · 미제출 대신 <b>미확인 · 항복</b> · 기간 중 순위 없음(마감일 결과 카드) · 참여할 때 <b>은행 연결 → 계좌 선택</b> · 1 · 2 · 3등 <b>메달</b>.</p>
 
   <hr>
@@ -195,9 +195,9 @@
   <hr>
   <h2>적용 방법</h2>
   <p><b>안정훈</b>: <code>static/common.css</code> 를 <code>static/board/common-proposal.css</code> 내용으로 바꾸면 변수와 클래스 이름이 같아서 지금 화면은 그대로 동작해요. 흐름 화면 배치(단계 표시, 동의 표, 계좌 목록)는 <code>static/board/flow/flow.css</code> 에 있어요.</p>
-  <p><b>각자 화면</b>: <code>/flow</code> 의 같은 화면을 보고, Claude Code 에 아래를 붙여 넣으면 돼요. 옮기는 법은 <code>static/board/flow/README.md</code>.</p>
+  <p><b>각자 화면</b>: 실제 화면(<code>/</code>, <code>/r/{code}</code>, <code>/r/{code}/add</code>)이 이 가이드 모양으로 바뀌어 있어요. 새 화면을 만들 때는 Claude Code 에 아래를 붙여 넣으면 돼요. 옮기는 법은 <code>static/board/flow/README.md</code>.</p>
   <pre>static/board/ui-guide.html, static/board/flow/README.md, static/common.css 를 읽고,
-/flow 의 같은 화면을 기준으로 내 레인 화면을 맞춰 줘.
+static/rooms/room.html · static/expenses/add.html 의 마크업을 기준으로 내 레인 화면을 맞춰 줘.
 새 색이나 글꼴을 만들지 말고 가이드의 것(button, .secondary, .small, .danger-line, .note, .stamp, .tag,
 .medal, .token, .lineup, .gauge, label.pick, .stepper, .consent, .n, mark, .is-me, ul.list, hr)만 써.
 한 화면에 큰 글자 하나와 기본 버튼 하나, 형광펜은 "나"에게만, 설명 문장은 빼고, 말투는 해요체로 숫자 먼저.</pre>
@@ -209,7 +209,7 @@
 </div>
 <div class="screens">
   <div>
-    <p class="screen-name"><a href="/flow">방 만들기 <code>/</code></a></p>
+    <p class="screen-name"><a href="/">방 만들기 <code>/</code></a></p>
     <div class="paper">
       <p class="brand">텅장방어전</p>
       <h1 class="hook">이번 주 예산,<br>누가 끝까지 버틸까?</h1>
@@ -228,7 +228,7 @@
   </div>
 
   <div>
-    <p class="screen-name"><a href="/flow/r/demo">참여 ① 정보 입력 <code>/r/{code}</code></a></p>
+    <p class="screen-name"><a href="/r/demo">참여 ① 정보 입력 <code>/r/{code}</code></a></p>
     <div class="paper flow-step">
       <p class="brand">텅장방어전</p>
       <ol class="stepper"><li class="is-now">정보 입력</li><li>은행 연결</li><li>계좌 선택</li></ol>
@@ -294,7 +294,7 @@
   </div>
 
   <div>
-    <p class="screen-name"><a href="/flow/r/demo/me">내 페이지 <code>/r/{code}/add</code></a></p>
+    <p class="screen-name"><a href="/r/demo/add">내 페이지 <code>/r/{code}/add</code></a></p>
     <div class="paper">
       <p class="brand">텅장방어전</p>
       <p class="meta me-meta"><span class="token p5 is-me">발</span><span>발표자 · 데모 방 · <b>D-4</b></span></p>

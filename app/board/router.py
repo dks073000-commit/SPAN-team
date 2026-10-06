@@ -2,9 +2,10 @@
 
 from datetime import date
 from pathlib import Path
+from urllib.parse import quote
 
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse
 
 from app.board.calc import build_board
 from app.db import connect
@@ -19,14 +20,21 @@ def board_page(code: str):
     return FileResponse(STATIC / "board.html")
 
 
-# 시연용 전체 흐름: 방 만들기 → 참여 → 내 페이지 → 결과 카드를 보드 레인 UI로 끊김 없이 보여 준다.
-# 데이터는 브라우저에만 저장하는 가짜 데이터다 (static/board/flow/store.js). 실제 화면은 각 레인의 주소에 있다.
+# 발표용 입구 /flow: 이 브라우저에 "발표 모드"를 켜고 실제 방 만들기(/)로 보낸다.
+# 화면 · 기능은 전부 실제 서비스 것이고, 발표하는 브라우저에서만 위에 시연 막대가 뜬다 (static/board/flow/demo-bar.js).
+# 그래서 시연 중 만든 방 링크는 진짜 링크다 (다른 폰에서 열면 막대 없이 같은 방).
 FLOW = STATIC / "flow"
+
+FLOW_START = """<!doctype html><html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>텅장방어전 · 발표 모드</title></head>
+<body><p>발표 모드를 켜는 중이에요</p>
+<script>try { localStorage.setItem("flow:demo", "1"); } catch (e) {} location.replace("/");</script>
+</body></html>"""
 
 
 @router.get("/flow", include_in_schema=False)
-def flow_create():
-    return FileResponse(FLOW / "index.html")
+def flow_start():
+    return HTMLResponse(FLOW_START)
 
 
 @router.get("/flow/privacy", include_in_schema=False)
@@ -35,19 +43,20 @@ def flow_privacy():
     return FileResponse(FLOW / "privacy.html")
 
 
+# 예전 가짜 시연 주소(/flow/r/...)로 공유된 링크는 실제 주소로 넘긴다
 @router.get("/flow/r/{code}", include_in_schema=False)
 def flow_room(code: str):
-    return FileResponse(FLOW / "room.html")
+    return RedirectResponse(f"/r/{quote(code)}", status_code=307)
 
 
 @router.get("/flow/r/{code}/me", include_in_schema=False)
 def flow_me(code: str):
-    return FileResponse(FLOW / "me.html")
+    return RedirectResponse(f"/r/{quote(code)}/add", status_code=307)
 
 
 @router.get("/flow/r/{code}/board", include_in_schema=False)
 def flow_board(code: str):
-    return FileResponse(STATIC / "board.html")
+    return RedirectResponse(f"/r/{quote(code)}/board", status_code=307)
 
 
 @router.get("/api/board")

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#e4e4e9">
   <title>가상은행 · 계좌 연결</title>
-  <!-- 화면은 보드 레인 시안 /flow (static/board/flow/room.html 의 ② 은행 연결 · ③ 계좌 선택 단계)를 그대로 옮겼다.
+  <!-- 화면은 UI 가이드(static/board/ui-guide.html)의 참여 ② 은행 연결 · ③ 계좌 선택 모양 그대로.
        기능은 그대로: form action · hidden input(redirect_uri, state) · 계좌 칸(서버가 아래 계좌 자리 주석에 넣음) -->
   <link rel="stylesheet" href="/static/board/common-proposal.css">
   <link rel="stylesheet" href="/static/board/flow/flow.css">
@@ -168,5 +168,7 @@
     });
   }
 </script>
+<!-- 발표 모드(/flow 로 들어온 브라우저)에서만 위에 시연 막대를 띄운다 -->
+<script src="/static/board/flow/demo-bar.js" defer></script>
 </body>
 </html>

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#e4e4e9">
   <title>텅장방어전 · 방 만들기</title>
-  <!-- 화면은 보드 레인 시안 /flow (static/board/flow/index.html) 을 그대로 옮겼다. 공용 common.css 는 건드리지 않고 시안 스타일을 직접 읽는다 -->
+  <!-- 모양은 UI 가이드(static/board/ui-guide.html) 그대로. 공용 common.css 는 건드리지 않고 보드 레인 스타일을 직접 읽는다 -->
   <link rel="stylesheet" href="/static/board/common-proposal.css">
   <link rel="stylesheet" href="/static/board/flow/flow.css">
 </head>
@@ -81,5 +81,7 @@
     }
   });
 </script>
+<!-- 발표 모드(/flow 로 들어온 브라우저)에서만 위에 시연 막대를 띄운다. 일반 사용자에게는 아무것도 안 한다 -->
+<script src="/static/board/flow/demo-bar.js" defer></script>
 </body>
 </html>

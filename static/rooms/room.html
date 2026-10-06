@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#e4e4e9">
   <title>텅장방어전 · 방</title>
-  <!-- 화면은 보드 레인 시안 /flow (static/board/flow/room.html) 을 그대로 옮겼다. 기능(API · 저장)은 원래 방 레인 것 그대로다 -->
+  <!-- 모양은 UI 가이드(static/board/ui-guide.html) 그대로. 기능(API · 저장)은 원래 방 레인 것 그대로다 -->
   <link rel="stylesheet" href="/static/board/common-proposal.css">
   <link rel="stylesheet" href="/static/board/flow/flow.css">
 </head>
@@ -36,7 +36,7 @@
     function setDraft(d) { try { sessionStorage.setItem(draftKey, JSON.stringify(d)); } catch (e) {} }
     function clearDraft() { try { sessionStorage.removeItem(draftKey); } catch (e) {} }
 
-    /* ---------- 그리기 도우미 (시안 store.js 와 같은 모양) ---------- */
+    /* ---------- 그리기 도우미 (결과 카드 board.js 와 같은 모양: 사람 색 토큰 · 날짜) ---------- */
     const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
     const won = (n) => Math.abs(Math.round(n)).toLocaleString("ko-KR");
     const pad = (n) => String(n).padStart(2, "0");
@@ -341,5 +341,7 @@
     load();
   })();
 </script>
+<!-- 발표 모드(/flow 로 들어온 브라우저)에서만 위에 시연 막대를 띄운다. 일반 사용자에게는 아무것도 안 한다 -->
+<script src="/static/board/flow/demo-bar.js" defer></script>
 </body>
 </html>

@@ -4,7 +4,7 @@
 // "나"는 localStorage 의 member_id:{code}.
 // 시연용: ?preview=1 이면 마감 전에도 결과 카드를 미리 본다.
 // 개발용: ?sample 을 붙이면 예시 데이터로 그린다 (&preview=1 결과, &end 마감일인 척, &guest 참여 전, &me=4 다른 사람 시점).
-// 시연용 전체 흐름: /flow/r/{code}/board 는 브라우저에 저장한 가짜 데이터(static/board/flow/store.js)로 그린다.
+// 발표 시연: /flow 로 들어온 브라우저에서만 위에 시연 막대가 뜬다 (static/board/flow/demo-bar.js). 데이터는 실제 API 그대로.
 
 (function () {
   "use strict";
@@ -13,12 +13,10 @@
   const params = new URLSearchParams(location.search);
   const isSample = params.has("sample");
   const wantPreview = ["1", "true", "result"].includes(params.get("preview"));
-  const pathMatch = location.pathname.match(/^(\/flow)?\/r\/([^/]+)\/board/) || [];
-  const isFlow = Boolean(pathMatch[1]);
-  const code = decodeURIComponent(pathMatch[2] || "");
-  const base = isFlow ? "/flow" : "";
-  const myPage = isFlow ? `/flow/r/${encodeURIComponent(code)}/me` : `/r/${encodeURIComponent(code)}/add`;
-  const roomPage = `${base}/r/${encodeURIComponent(code)}`;
+  const pathMatch = location.pathname.match(/^\/r\/([^/]+)\/board/) || [];
+  const code = decodeURIComponent(pathMatch[1] || "");
+  const myPage = `/r/${encodeURIComponent(code)}/add`;
+  const roomPage = `/r/${encodeURIComponent(code)}`;
 
   const WD = ["일", "월", "화", "수", "목", "금", "토"];
   const won = (n) => Math.abs(Math.round(n)).toLocaleString("ko-KR");
@@ -86,20 +84,6 @@
   }
 
   async function load() {
-    if (isFlow) {
-      const css = document.createElement("link");
-      css.rel = "stylesheet";
-      css.href = "/static/board/flow/flow.css";
-      document.head.appendChild(css);
-      await loadScript("/static/board/flow/store.js");
-      const state = window.Flow.load(code);
-      window.Flow.toolbar(code);   // 영수증 위 시연 막대 (참여자 시점 | 개발자 시점 + 도구)
-      const bar = document.querySelector(".demo-bar");
-      if (bar) document.querySelector(".counter").prepend(bar);
-      window.Flow.tabbar(code, "result");   // 아래 고정 탭 [내 기록 | 결과]
-      if (!state) throw Object.assign(new Error("missing"), { kind: "missing" });
-      return { data: window.Flow.board(state, wantPreview), me: window.Flow.myId(code) };
-    }
     if (isSample) {
       const res = await fetch("/static/board/sample-board.json", { cache: "no-store" });
       const data = await res.json();
@@ -208,19 +192,14 @@
         <p class="privacy-note">결과 날에도 친구에게는 총액만 보여요</p>
       </section>`;
     // 친구 더 부르기: 참여한 뒤에는 방 홈으로 못 돌아가니 링크를 여기서 다시 꺼낸다
-    // (시연 흐름은 방 이름 · 기간을 담은 링크라 다른 폰에서도 열린다)
     $("invite-copy").addEventListener("click", (ev) => copyInvite(ev.currentTarget));
-    // 시연 흐름에서 참여한 사람은 아래 고정 탭 [내 기록 | 결과] 로 오가니 버튼을 겹쳐 두지 않는다
-    const tabbed = isFlow && document.body.classList.contains("has-tabbar");
-    $("actions").innerHTML = tabbed ? ""
-      : joined ? `<a class="btn" href="${myPage}">내 페이지로</a>`
+    $("actions").innerHTML = joined ? `<a class="btn" href="${myPage}">내 기록으로</a>`
       : `<a class="btn" href="${roomPage}">이 방에 참여하기</a>`;
-    $("actions").hidden = tabbed;
+    $("actions").hidden = false;
     document.title = `${room.name} · ${dday}`;
   }
 
   function inviteLink() {
-    if (isFlow && window.Flow && window.Flow.roomLink) return window.Flow.roomLink(code);
     return `${location.origin}/r/${encodeURIComponent(code)}`;
   }
 
@@ -381,7 +360,7 @@
     return out;
   }
 
-  const homeLink = () => `${location.host}${isFlow ? "/flow" : "/"}`;
+  const homeLink = () => `${location.host}/`;
 
   // 장식용 바코드: 방 코드와 내 번호로 늘 같은 줄무늬 (스캔해도 아무 정보가 없다)
   function barcode(seed) {
@@ -544,7 +523,7 @@
         ? "링크가 맞는지 한 번 더 확인해 주세요."
         : "잠시 뒤에 다시 열어 주세요. 서버가 잠들어 있으면 첫 접속에 1분쯤 걸려요."}</p>`;
     $("actions").innerHTML = missing
-      ? `<a class="btn" href="${isFlow ? "/flow" : "/"}">새 방 만들기</a>`
+      ? `<a class="btn" href="/">새 방 만들기</a>`
       : '<button class="btn" type="button" id="retry">다시 불러오기</button>';
     $("actions").hidden = false;
     const retry = $("retry");
