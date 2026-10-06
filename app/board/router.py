@@ -89,8 +89,8 @@ def get_board(code: str, preview: bool = False):
     마감일 전에는 순위를 내보내지 않는다 (members 가 빈 목록). preview=1 은 시연용 미리 보기다.
     거래 항목(상호, 개별 금액)은 내보내지 않는다. 합계만 돌려준다.
     """
-    # TODO(지출 레인 API 이름이 정해지면): 마감일에는 결과를 만들기 전에
-    # 아직 안 불러온 멤버의 내역을 지출 레인의 마감 자동 반영 API로 채운다 (BUILD_ORDER "마감 자동 반영").
+    # 마감 자동 반영은 결과 카드 화면(board.js)이 이 API 를 부르기 전에
+    # 지출 레인의 POST /api/expenses/rooms/{code}/settle 을 부른다 (레인끼리 import 하지 않기 위해 화면에서).
     rows = load_board_rows(code)
     if rows is None:
         raise HTTPException(404, "없는 방입니다")

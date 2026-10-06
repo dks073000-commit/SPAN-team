@@ -110,11 +110,40 @@
       const me = params.has("guest") ? null : Number(params.get("me")) || data.sample_me;
       return { data, me };
     }
+    let data = await fetchBoard();
+    // 마감 자동 반영: 결과가 열리는 날(또는 시연 미리 보기)에만, 본인이 불러오기를 안 눌렀어도 거래가 반영되게 한다.
+    // 지출 레인 API 를 화면에서 부른다 (레인끼리 import 하지 않는다, CLAUDE.md). 기간 중에는 부르지 않는다:
+    // 남의 거래가 저장되면 그 사람이 갑자기 미확인이 되기 때문이다. 실패해도 결과 카드는 그대로 연다.
+    if (data.room && (data.room.result_open || data.room.preview) && await settle()) {
+      data = await fetchBoard().catch(() => data);
+    }
+    return { data, me: myId() };
+  }
+
+  async function fetchBoard() {
     const q = wantPreview ? "?preview=1" : "";
     const res = await fetch(`/api/board/${encodeURIComponent(code)}${q}`, { cache: "no-store" });
     if (res.status === 404) throw Object.assign(new Error("missing"), { kind: "missing" });
     if (!res.ok) throw Object.assign(new Error("server"), { kind: "server" });
-    return { data: await res.json(), me: myId() };
+    return res.json();
+  }
+
+  // POST /api/expenses/rooms/{code}/settle (지출 레인). 금액 · 상세는 돌려주지 않는다. 새로 저장한 게 있으면 true
+  async function settle() {
+    const ctrl = typeof AbortController === "function" ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(() => ctrl.abort(), 8000) : null;
+    try {
+      const res = await fetch(`/api/expenses/rooms/${encodeURIComponent(code)}/settle`, {
+        method: "POST", cache: "no-store", signal: ctrl ? ctrl.signal : undefined,
+      });
+      if (!res.ok) return false;   // 404 · 은행 오류: 무시하고 지금 결과로 그린다
+      const body = await res.json();
+      return (body.members || []).some((m) => Number(m.added) > 0);
+    } catch (e) {
+      return false;                // 네트워크 오류 · 8초 넘김
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 
   function head(room) {
