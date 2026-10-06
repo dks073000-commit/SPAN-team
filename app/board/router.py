@@ -29,6 +29,12 @@ def flow_create():
     return FileResponse(FLOW / "index.html")
 
 
+@router.get("/flow/privacy", include_in_schema=False)
+def flow_privacy():
+    # 개인정보 처리방침 (모든 화면 바닥글에서 연결). 공용 주소 /privacy 는 방 + 공용 레인이 정한다
+    return FileResponse(FLOW / "privacy.html")
+
+
 @router.get("/flow/r/{code}", include_in_schema=False)
 def flow_room(code: str):
     return FileResponse(FLOW / "room.html")

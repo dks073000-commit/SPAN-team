@@ -130,10 +130,19 @@ window.Flow = (function () {
     save(state);
   }
 
+  // 보관 기간 (팀 결정 10/6): 방 마감일 다음 날부터 30일이 지나면 방 · 참여자 · 거래를 함께 지운다.
+  // 실제 서비스는 서버가 매일 지우고(방 레인 요청), 시연용 가짜 서버는 방을 열 때 지운다.
+  const KEEP_DAYS = 30;
+  const expired = (room) => Boolean(room) && room.code !== "demo" && today() > addDays(room.end_date, KEEP_DAYS);
+
   function load(code) {
-    const state = get(roomKey(code));
+    let state = get(roomKey(code));
+    if (state && expired(state.room)) { drop(roomKey(code)); drop(meKey(code)); state = null; }
     if (state) return state;
-    return code === "demo" ? seedDemo() : fromLink(code);
+    if (code === "demo") return seedDemo();
+    const fresh = fromLink(code);
+    if (fresh && expired(fresh.room)) { drop(roomKey(code)); return null; }
+    return fresh;
   }
   const save = (state) => put(roomKey(state.room.code), state);
 
@@ -441,6 +450,7 @@ window.Flow = (function () {
     sheet.addEventListener("click", onAct);
     document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && !sheet.hidden) closeSheet(); });
     document.body.prepend(bar);
+    footer();   // 바닥글은 시연 막대와 상관없이 서비스의 일부 (결과 화면은 board.js 가 영수증 아래로 옮긴다)
     document.body.append(sheet);
     return page;
   }
@@ -452,6 +462,19 @@ window.Flow = (function () {
     result: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="14" r="6"/><path d="M8.5 3h7l-2 6.2M10.5 9.2L8.5 3"/><path d="M12 11.5v5"/></svg>',
     lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
   };
+
+  /* ---------- 바닥글: 모든 화면 맨 아래 개인정보 처리방침 링크 (개인정보보호법 30조 · 시행령 31조 2항) ---------- */
+  // 다른 서비스(토스 · 카카오뱅크 · 당근)처럼 화면 맨 아래 작은 글씨, 처리방침만 굵게 구분한다
+  function footer(parent) {
+    const found = document.querySelector(".site-foot");
+    if (found) return found;   // 결과 화면(board.html)은 자기 바닥글이 이미 있다
+    const f = document.createElement("footer");
+    f.className = "site-foot";
+    f.innerHTML = '<a class="sf-privacy" href="/flow/privacy">개인정보 처리방침</a>'
+      + '<span class="sf-sep" aria-hidden="true">·</span><span>텅장방어전 · SPAN 팀</span>';
+    (parent || document.body).appendChild(f);
+    return f;
+  }
 
   function tabbar(code, active) {
     if (!code || myId(code) == null) return;
@@ -472,7 +495,7 @@ window.Flow = (function () {
 
   return {
     ACCOUNTS, BANK_NAME, md, won, esc, today, addDays, parse, token, accountName, daysLeft, bankLinked, linkBank,
-    load, createRoom, join, myId, member, reset, claim, tabbar,
+    load, createRoom, join, myId, member, reset, claim, tabbar, footer, KEEP_DAYS,
     importTx, updateItem, confirm, giveUp, totals, roomInfo, board, share, toolbar, roomLink,
   };
 })();

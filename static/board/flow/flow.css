@@ -397,3 +397,17 @@ body:has(dialog[open]) { overflow: hidden; }
 
 /* 10/6: 거래 목록 위 "총액만" 안내 (결과 카드 꼬리 대신) */
 .panel .privacy-note { margin: -4px 0 10px; font-size: 13px; line-height: 1.5; color: var(--ink-soft); }
+
+/* 10/6 바닥글: 모든 화면 맨 아래. 작은 회색 글씨, 개인정보 처리방침만 굵게 (처리방침 작성지침: 다른 고지와 구분) */
+.site-foot {
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px 6px;
+  max-width: 480px; margin: 20px auto 8px; padding: 0 16px;
+  font-size: 12px; line-height: 1.6; color: var(--ink-soft, #5e5e68); text-align: center;
+}
+.site-foot .sf-privacy { color: var(--ink, #1c1c21); font-weight: 700; text-decoration: none; padding: 10px 2px; }
+.site-foot .sf-privacy:hover, .site-foot .sf-privacy:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
+/* 동의 팝업 맨 아래: 처리방침 전체 · 책임자 */
+.terms-sheet .ts-more { margin: 4px 0 14px; font-size: 13px; color: var(--ink-soft); }
+.terms-sheet .ts-more a { color: var(--ink); font-weight: 700; text-underline-offset: 3px; }
+.terms-sheet section p + dl, .terms-sheet section dl + p { margin-top: 8px; }
+.terms-sheet .ts-more .nowrap { white-space: nowrap; }

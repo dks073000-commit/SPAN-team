@@ -96,7 +96,7 @@
         `<li class="${i + 1 < now ? "is-done" : i + 1 === now ? "is-now" : ""}"${i + 1 === now ? ' aria-current="step"' : ""}>${n}</li>`).join("")}</ol>`;
     }
 
-    // 동의 '자세히 보기' 팝업: 법이 알리라고 정한 것만, 짧게 (① 개인정보보호법 15조2항 ② 26조 ③ 금융실명법 4조1항 · 신용정보법 32조1항)
+    // 동의 '자세히 보기' 팝업: 법이 알리라고 정한 것만, 짧게 (① 개인정보보호법 15조2항 ② 26조 ③ 28조의8 ④ 금융실명법 4조1항 · 신용정보법 32조1항)
     function termsDialog() {
       return `
         <dialog id="terms" class="terms-sheet" aria-labelledby="terms-title">
@@ -109,7 +109,7 @@
                 <div><dt>받는 곳</dt><dd>텅장방어전 (SPAN 팀)</dd></div>
                 <div><dt>쓰는 목적</dt><dd>이 방의 예산 사용률 계산과 결과 카드</dd></div>
                 <div><dt>받는 항목</dt><dd>닉네임, 예산, 숫자 4자리(알아볼 수 없게 바꿔 저장), 고른 계좌의 출금 날짜 · 시간 · 금액 · 가게 이름</dd></div>
-                <div><dt>보관 기간</dt><dd>방 마감 후 바로 삭제</dd></div>
+                <div><dt>보관 기간</dt><dd>방 마감일 다음 날부터 30일이 지나면 방 · 참여자 · 출금 내역을 함께 자동 삭제</dd></div>
                 <div><dt>거부할 권리</dt><dd>동의하지 않아도 돼요. 다만 출금 내역을 불러올 수 없어 이 방에는 참여할 수 없어요</dd></div>
               </dl>
               <p class="ts-law">개인정보보호법 제15조 제2항</p>
@@ -123,10 +123,21 @@
               <p class="ts-law">개인정보보호법 제26조</p>
             </section>
             <section>
-              <h3>③ 금융거래정보 제공</h3>
+              <h3>③ 국외 이전</h3>
+              <p>서비스를 쓰는 동안 위 항목이 암호화된 인터넷 연결로 국외 서버에 저장 · 처리돼요.</p>
+              <dl>
+                <div><dt>Render</dt><dd>싱가포르 · Render Services, Inc. (privacy@render.com)</dd></div>
+                <div><dt>Supabase</dt><dd>서버 위치 확인 중 · Supabase Inc. (privacy@supabase.com)</dd></div>
+              </dl>
+              <p>이전을 원하지 않으면 참여하지 않으면 돼요. 이 경우 이 방에는 참여할 수 없어요.</p>
+              <p class="ts-law">개인정보보호법 제28조의8</p>
+            </section>
+            <section>
+              <h3>④ 금융거래정보 제공</h3>
               <p>은행이 출금 내역을 텅장방어전에 보내려면 내 동의가 따로 필요해요. 실제 서비스에서는 은행 인증 화면에서 한 번 더 동의해요.</p>
               <p class="ts-law">금융실명법 제4조 제1항 · 신용정보법 제32조 제1항</p>
             </section>
+            <p class="ts-more"><a href="/flow/privacy">개인정보 처리방침 전체 보기</a> <br>개인정보 보호책임자 안정훈 <span class="nowrap">010-3822-0720</span></p>
             <button type="button" class="wide secondary" id="terms-close">닫기</button>
           </div>
         </dialog>`;
@@ -197,7 +208,7 @@
               <li><span class="sc-ic">${ICON.eye}</span><div><b>텅장방어전이 보는 것</b><span>날짜 · 금액 · 가게 이름</span></div></li>
               <li><span class="sc-ic">${ICON.lock}</span><div><b>텅장방어전이 못 하는 것</b><span>송금 · 결제 · 비밀번호 저장</span></div></li>
               <li><span class="sc-ic">${ICON.people}</span><div><b>친구가 보는 것</b><span>총액과 순위만</span></div></li>
-              <li><span class="sc-ic">${ICON.trash}</span><div><b>지우는 때</b><span>방이 끝나면 바로</span></div></li>
+              <li><span class="sc-ic">${ICON.trash}</span><div><b>지우는 때</b><span>마감 30일 뒤 자동으로</span></div></li>
             </ul>
             <label class="agree agree-terms"><input type="checkbox" id="agree"><span><b>[필수]</b> 위 내용으로 계좌 조회에 동의해요</span></label>
             <p class="agree-note">수집 항목 · 보관 기간 · 맡기는 곳 안내 <button type="button" id="terms-open" class="text-btn" aria-haspopup="dialog">자세히 보기</button></p>

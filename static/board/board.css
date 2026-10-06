@@ -534,3 +534,12 @@ mark {
 }
 .invite-copy:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 4px; }
 .invite-row + .privacy-note { margin-top: 0; }
+
+/* 10/6 바닥글: 모든 화면 맨 아래. 작은 회색 글씨, 개인정보 처리방침만 굵게 (처리방침 작성지침: 다른 고지와 구분) */
+.site-foot {
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px 6px;
+  max-width: 480px; margin: 20px auto 8px; padding: 0 16px;
+  font-size: 12px; line-height: 1.6; color: var(--ink-soft, #5e5e68); text-align: center;
+}
+.site-foot .sf-privacy { color: var(--ink, #1c1c21); font-weight: 700; text-decoration: none; padding: 10px 2px; }
+.site-foot .sf-privacy:hover, .site-foot .sf-privacy:focus-visible { text-decoration: underline; text-underline-offset: 3px; }
