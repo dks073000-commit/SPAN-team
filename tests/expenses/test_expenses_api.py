@@ -80,12 +80,12 @@ def test_presenter_demo_flow(room, monkeypatch):
     assert taxis[20000]["badges"] == ["자동 제외 · 가승인"] and taxis[20000]["excluded"] and taxis[20000]["auto"]
     assert taxis[9800]["badges"] == [] and not taxis[9800]["excluded"]
     assert all(i["date"] >= "2026-10-02" for i in s["items"])  # 기간 밖은 저장하지 않음
-    for name in ["간편결제충전", "안정훈"]:  # 꼬리표만 달고 포함 (본인이 제외를 고른다, /flow 와 같다)
+    for name in ["간편결제충전", "이예시"]:  # 꼬리표만 달고 포함 (본인이 제외를 고른다, /flow 와 같다)
         assert (item(s, name)["badges"], item(s, name)["excluded"]) == (["충전·내 계좌 이체일 수 있어요"], False)
     assert item(s, "편의점")["badges"] == ["중복일 수 있어요"]
 
     # 발표 전 정리: 통신비 · 충전 · 내 계좌 이체 · 편의점 한 건 제외, 조정 완료
-    for name, nth in [("통신비", 0), ("간편결제충전", 0), ("안정훈", 0), ("편의점", 1)]:
+    for name, nth in [("통신비", 0), ("간편결제충전", 0), ("이예시", 0), ("편의점", 1)]:
         patch(me_id, item(s, name, nth)["id"], excluded=True)
     s = confirm(me_id)
     assert (s["spent"], s["status"]) == (26400, "조정 완료")

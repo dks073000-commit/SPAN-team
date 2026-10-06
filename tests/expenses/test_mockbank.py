@@ -194,17 +194,14 @@ def test_balance_bad_request():
 AUTH_URL = "/api/expenses/mockbank/oauth/2.0/authorize"
 
 
-def test_connect_page_shows_only_my_accounts():
-    """동의는 방 화면에서 받으니 은행 화면은 계좌 선택만 (10/6)."""
+def test_connect_page_shows_consent_and_my_accounts():
     res = client.get(AUTH_URL, params={"redirect_uri": "/r/demo", "state": "xyz"})
     assert res.status_code == 200
     page = res.text
-    assert "계좌 연결" in page and "텅장방어전" in page and "버티기" not in page and "시연용 가상 계좌" in page
-    assert "[필수]" not in page and 'id="agree"' not in page
-    assert '연결된 계좌 <span class="n">2</span>개' in page
+    assert "계좌 연결" in page and "텅장방어전" in page and "버티기" not in page and "시연용 가상 계좌" in page and "[필수]" in page
     assert "생활비 통장" in page and "123-****-1234" in page  # 입출금 (시연 거래)
     assert "자유적금" in page and "123-****-5678" in page  # 적금
-    assert "안정훈" not in page and "500000" not in page  # 주인 이름 · 잔액은 안 보여 줌
+    assert "이예시" not in page and "500000" not in page  # 주인 이름 · 잔액은 안 보여 줌
 
 
 def test_connect_returns_chosen_account_to_redirect_uri():
@@ -231,7 +228,7 @@ def test_connect_needs_a_chosen_account():
 def test_savings_has_no_withdrawals():
     assert ask(SAVINGS, inquiry_type="O")["res_list"] == []
     (deposit,) = ask(SAVINGS, inquiry_type="I")["res_list"]
-    assert (deposit["print_content"], deposit["tran_amt"]) == ("안정훈", "100000")  # A 에서 보낸 내 계좌 이체
+    assert (deposit["print_content"], deposit["tran_amt"]) == ("이예시", "100000")  # A 에서 보낸 내 계좌 이체
     bal = ask_balance(SAVINGS)
     assert (bal["account_type"], bal["product_name"], bal["maturity_date"], bal["balance_amt"]) == (
         "2", "자유적금", "20270302", "1300000"

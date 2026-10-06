@@ -63,7 +63,7 @@ def test_fetch_range_reaches_the_dawn_after_end():
 
 
 def test_charge_and_own_transfer_are_kept_with_a_tag():
-    for name in ["간편결제충전", "안정훈"]:
+    for name in ["간편결제충전", "이예시"]:
         (item,) = by_merchant(name)
         assert (item["excluded"], item["reason"]) == (False, classify.REASON_TRANSFER)
 
@@ -77,7 +77,7 @@ def test_scenario_total_after_presenter_choices():
     total = 0
     seen_store = False
     for item in items():
-        if item["excluded"] or item["merchant"] in ("통신비", "간편결제충전", "안정훈"):
+        if item["excluded"] or item["merchant"] in ("통신비", "간편결제충전", "이예시"):
             continue
         if item["merchant"] == "편의점":
             if seen_store:

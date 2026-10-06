@@ -200,14 +200,14 @@ def _safe_redirect(redirect_uri: str) -> bool:
 
 
 def _account_choices() -> str:
-    """계좌 선택 칸 (UI 가이드의 label.pick). 은행 이름 + 상품 이름 + 가린 계좌번호만 보여 준다 (잔액 · 주인 이름은 안 보여 줌)."""
+    """② 내 계좌 선택 칸. 은행 이름 + 상품 이름 + 가린 계좌번호만 보여 준다 (잔액 · 주인 이름은 안 보여 줌)."""
     rows = []
     for i, (num, account) in enumerate(data.ACCOUNTS.items()):
         rows.append(
             f'<label class="pick"><input type="radio" name="fintech_use_num" value="{escape(num)}"'
             f'{" checked" if i == 0 else ""}>'
-            f'<span>{escape(data.BANK_NAME)} {escape(account["product_name"])}'
-            f'<span class="pick-sub">{escape(account["masked"])}</span></span></label>'
+            f'<span><b>{escape(account["product_name"])}</b>'
+            f'<small>{escape(data.BANK_NAME)} {escape(account["masked"])}</small></span></label>'
         )
     return "\n".join(rows)
 
@@ -217,11 +217,7 @@ def authorize_page(redirect_uri: str = "", state: str = ""):
     """가짜 은행 인증 화면. 참여 폼의 [은행 연결하기] 버튼이 이 주소로 보낸다."""
     if not _safe_redirect(redirect_uri):
         return HTMLResponse("redirect_uri 는 같은 사이트 안의 주소(/로 시작)여야 합니다.", status_code=400)
-    page = (
-        AUTH_PAGE.read_text(encoding="utf-8")
-        .replace("<!--ACCOUNTS-->", _account_choices())
-        .replace("<!--ACCOUNT_COUNT-->", str(len(data.ACCOUNTS)))
-    )
+    page = AUTH_PAGE.read_text(encoding="utf-8").replace("<!--ACCOUNTS-->", _account_choices())
     return HTMLResponse(page)
 
 
