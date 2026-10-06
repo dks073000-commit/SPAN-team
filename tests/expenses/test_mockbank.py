@@ -62,17 +62,17 @@ def test_response_has_spec_fields():
     assert isinstance(row["tran_amt"], str)
 
 
-def test_first_day_is_start_date_and_day_zero_is_before():
+def test_first_day_is_start_date():
     rows = ask()["res_list"]
-    assert (rows[0]["tran_date"], rows[0]["print_content"]) == ("20261001", "식당")  # A-01, 0일째
-    assert (rows[1]["tran_date"], rows[1]["print_content"]) == ("20261002", "카페")  # A-02, 1일째
+    assert (rows[0]["tran_date"], rows[0]["print_content"]) == ("20261002", "카페")  # A-02, 1일째
+    assert all(r["tran_date"] >= "20261002" for r in rows)  # 방 기간 밖 거래는 없다 (10/6)
 
 
 def test_counts():
     def count(num, kind):
         return len(ask(num, inquiry_type=kind)["res_list"])
 
-    assert (count(A, "O"), count(A, "I")) == (11, 2)
+    assert (count(A, "O"), count(A, "I")) == (10, 2)
 
 
 def test_withdrawals_only():
@@ -110,8 +110,8 @@ def test_sort_order():
 
 def test_balance_follows_transactions():
     res = ask()
-    assert res["res_list"][-1]["after_balance_amt"] == "271300"
-    assert res["balance_amt"] == "271300"
+    assert res["res_list"][-1]["after_balance_amt"] == "280300"
+    assert res["balance_amt"] == "280300"
 
 
 def test_paging(monkeypatch):
@@ -120,9 +120,9 @@ def test_paging(monkeypatch):
     assert (first["page_record_cnt"], first["next_page_yn"]) == ("4", "Y")
     second = ask(befor_inquiry_trace_info=first["befor_inquiry_trace_info"])
     assert second["res_list"][0] != first["res_list"][0]
-    pages = [first, second, ask(befor_inquiry_trace_info="8"), ask(befor_inquiry_trace_info="12")]
-    assert [p["next_page_yn"] for p in pages] == ["Y", "Y", "Y", "N"]
-    assert sum(len(p["res_list"]) for p in pages) == 13
+    pages = [first, second, ask(befor_inquiry_trace_info="8")]
+    assert [p["next_page_yn"] for p in pages] == ["Y", "Y", "N"]
+    assert sum(len(p["res_list"]) for p in pages) == 12
 
 
 def test_no_token_needed():
@@ -174,14 +174,14 @@ def test_balance_has_spec_fields():
 
 
 def test_balance_matches_transaction_list():
-    assert ask_balance()["balance_amt"] == ask()["balance_amt"] == "271300"
+    assert ask_balance()["balance_amt"] == ask()["balance_amt"] == "280300"
     assert ask_balance()["last_tran_date"] == "20261008"
 
 
 def test_balance_ignores_future(monkeypatch):
     set_now(monkeypatch, datetime(2026, 10, 3, 12, 0))  # 0~2일째만 일어남
     res = ask_balance()
-    assert res["balance_amt"] == "431200"  # 500,000 - 9,000 - 4,800 - 55,000
+    assert res["balance_amt"] == "440200"  # 500,000 - 4,800 - 55,000
     assert res["last_tran_date"] == "20261003"
 
 
@@ -198,9 +198,9 @@ def test_connect_page_shows_consent_and_my_accounts():
     res = client.get(AUTH_URL, params={"redirect_uri": "/r/demo", "state": "xyz"})
     assert res.status_code == 200
     page = res.text
-    assert "계좌 연결" in page and "시연용 가상 계좌" in page and "[필수]" in page
-    assert "버티기 입출금통장" in page and "123-****-1234" in page  # 입출금 (시연 거래)
-    assert "버티기 자유적금" in page and "123-****-5678" in page  # 적금
+    assert "계좌 연결" in page and "텅장방어전" in page and "버티기" not in page and "시연용 가상 계좌" in page and "[필수]" in page
+    assert "생활비 통장" in page and "123-****-1234" in page  # 입출금 (시연 거래)
+    assert "자유적금" in page and "123-****-5678" in page  # 적금
     assert "이예시" not in page and "500000" not in page  # 주인 이름 · 잔액은 안 보여 줌
 
 
@@ -210,7 +210,7 @@ def test_connect_returns_chosen_account_to_redirect_uri():
     )
     assert res.status_code == 303
     assert res.headers["location"] == (
-        "/r/demo?step=join&fintech_use_num=BTG00000000000000000000A&account_alias=%EB%B2%84%ED%8B%B0%EA%B8%B0+%EC%9E%85%EC%B6%9C%EA%B8%88%ED%86%B5%EC%9E%A5&state=xyz"
+        "/r/demo?step=join&fintech_use_num=BTG00000000000000000000A&account_alias=%EC%83%9D%ED%99%9C%EB%B9%84+%ED%86%B5%EC%9E%A5&state=xyz"
     )
 
 
@@ -231,7 +231,7 @@ def test_savings_has_no_withdrawals():
     assert (deposit["print_content"], deposit["tran_amt"]) == ("이예시", "100000")  # A 에서 보낸 내 계좌 이체
     bal = ask_balance(SAVINGS)
     assert (bal["account_type"], bal["product_name"], bal["maturity_date"], bal["balance_amt"]) == (
-        "2", "버티기 자유적금", "20270302", "1300000"
+        "2", "자유적금", "20270302", "1300000"
     )
 
 
