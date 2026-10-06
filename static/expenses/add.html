@@ -55,6 +55,7 @@
     let summary = null;
     let flash = "";
     let pinError = "";
+    let justConfirmed = false;   // 방금 조정 완료를 눌렀으면 도장이 쾅 찍히는 모션 (한 번만)
     let editing = false;     // 조정 완료 뒤 '수정하기'를 눌러 다시 고치는 중
     let focusKey = "";       // 인원 − + 를 누른 뒤 다시 그려도 같은 버튼에 초점을 둔다
     let busy = false;
@@ -227,7 +228,7 @@
         ${!hasItems ? `<hr>${action}` : ""}
         ${hasItems ? `
           <section class="panel${locked && !gaveUp ? " is-locked" : ""}" aria-label="불러온 거래">
-            ${locked && !gaveUp ? '<span class="stamp stamp-blue done-stamp">조정 완료</span>' : ""}
+            ${locked && !gaveUp ? `<span class="stamp stamp-blue done-stamp${justConfirmed ? " is-stamping" : ""}">조정 완료</span>` : ""}
             <p class="list-head"><span>불러온 거래 <span class="n">${items.length}</span>건</span>${gaveUp || locked ? "" : '<button type="button" id="load" class="reload-btn">새로 불러오기</button>'}</p>
             <p class="privacy-note">이 목록은 나만 봐요 · 친구에게는 총액만 보여요</p>
             <ul class="list">${rows}</ul>
@@ -274,7 +275,9 @@
         summary = await api("POST", "/api/expenses/confirm", body);
         editing = false;
         flash = "조정 완료. 결과 카드에 이대로 들어가요";
+        justConfirmed = true;
         render();
+        justConfirmed = false;
         window.scrollTo(0, 0);
       }));
       const edit = document.getElementById("edit");

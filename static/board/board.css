@@ -459,13 +459,18 @@ mark {
 .sf-tilt { transform-origin: center; filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.45)); }
 .sf-bottom { font-size: 12px; text-align: center; line-height: 1.6; color: #d9d9e0; margin: 12px 0 0; }
 .sf-bottom b { color: var(--paper); font-size: 13px; }
-.receipt.is-printing .s-stamp { animation: thump 420ms var(--ease-out) both; animation-delay: 900ms; }
+/* 내 칭호 도장(.s-stamp, "나" 요약 줄에만 있다): 영수증이 다 뽑힌 뒤 위에서 쾅 찍히고 영수증이 살짝 눌린다 */
+.receipt.is-printing .s-stamp { animation: thump 600ms cubic-bezier(0.2, 0.9, 0.3, 1.25) both; animation-delay: 1050ms; }
 @keyframes thump {
-  from { opacity: 0; scale: 1.6; }
-  to   { opacity: 0.88; scale: 1; }
+  0%   { opacity: 0; scale: 2.4; rotate: -10deg; }
+  55%  { opacity: 1; scale: 0.92; rotate: 2deg; }
+  78%  { scale: 1.05; rotate: -1deg; }
+  100% { opacity: 0.88; scale: 1; rotate: 0deg; }
 }
+.receipt.is-printing .s-me.r-reveal { animation: line-in 520ms var(--ease-out) both, thump-press 260ms ease-out; animation-delay: calc(240ms + var(--i, 0) * 55ms), 1330ms; }
+@keyframes thump-press { 0%, 100% { translate: 0 0; } 40% { translate: 0 2px; } }
 @media (prefers-reduced-motion: reduce) {
-  .receipt.is-printing .s-stamp { animation: none; }
+  .receipt.is-printing .s-stamp, .receipt.is-printing .s-me.r-reveal { animation: none; }
 }
 
 /* 꼬리 */
