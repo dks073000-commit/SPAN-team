@@ -1,6 +1,8 @@
 """방 레인: /, /r/{code}, /api/rooms/..."""
 
+import logging
 import secrets
+from contextlib import asynccontextmanager
 from datetime import date
 from pathlib import Path
 
@@ -8,7 +10,8 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field, field_validator
 
-from app.db import connect, fetch_all, fetch_one
+from app.db import connect, fetch_one
+from app.rooms.cleanup import purge_expired_rooms
 from app.rooms.pin import check_pin, hash_pin
 
 STATIC = Path(__file__).resolve().parents[2] / "static" / "rooms"
@@ -17,7 +20,21 @@ STATIC = Path(__file__).resolve().parents[2] / "static" / "rooms"
 CODE_CHARS = "abcdefghjkmnpqrstuvwxyz23456789"
 CODE_LENGTH = 6
 
-router = APIRouter()
+log = logging.getLogger(__name__)
+
+
+@asynccontextmanager
+async def lifespan(app):
+    # 서버가 깨어날 때 지난 방을 먼저 지운다 (app/rooms/cleanup.py). DB 가 안 닿아도 서버는 뜬다
+    try:
+        with connect() as conn:
+            purge_expired_rooms(conn)
+    except Exception:
+        log.exception("지난 방 지우기 실패 (서버는 그대로 시작)")
+    yield
+
+
+router = APIRouter(lifespan=lifespan)
 
 
 @router.get("/", include_in_schema=False)
@@ -57,6 +74,7 @@ def create_room(room: RoomIn):
     if room.end_date < room.start_date:
         raise HTTPException(422, "종료일이 시작일보다 빠릅니다")
     with connect() as conn:
+        purge_expired_rooms(conn)
         for _ in range(5):
             code = "".join(secrets.choice(CODE_CHARS) for _ in range(CODE_LENGTH))
             row = conn.execute(
@@ -75,18 +93,22 @@ def create_room(room: RoomIn):
 
 @router.get("/api/rooms/{code}")
 def get_room(code: str):
-    """방 정보와 멤버 목록."""
-    room = fetch_one(
-        "select code, name, start_date, end_date, upload_cycle, deadline_weekday from rooms where code = %s",
-        (code,),
-    )
+    """방 정보와 멤버 목록. 열기 전에 지난 방을 지우므로, 보관 기간이 지난 방은 404 다."""
+    with connect() as conn:
+        purge_expired_rooms(conn)
+        room = conn.execute(
+            "select code, name, start_date, end_date, upload_cycle, deadline_weekday from rooms where code = %s",
+            (code,),
+        ).fetchone()
+        # has_pin: 이름을 눌러 4자리로 다시 들어올 수 있는지. 해시는 내보내지 않는다
+        members = conn.execute(
+            "select id, nickname, budget, pin_hash is not null as has_pin from members where room_code = %s order by id",
+            (code,),
+        ).fetchall()
+    # 404 는 with 밖에서: 안에서 에러를 내면 위의 지우기까지 되돌려진다
     if room is None:
         raise HTTPException(404, "없는 방입니다")
-    # has_pin: 이름을 눌러 4자리로 다시 들어올 수 있는지. 해시는 내보내지 않는다
-    room["members"] = fetch_all(
-        "select id, nickname, budget, pin_hash is not null as has_pin from members where room_code = %s order by id",
-        (code,),
-    )
+    room["members"] = members
     return room
 
 
