@@ -2,21 +2,28 @@
 
 본인 페이지 흐름: 불러오기(바로 저장) → 몇 명이서 · 제외 고치기 → 조정 완료.
 남의 지출 상세(상호 · 금액)는 어떤 API 로도 내보내지 않는다. 내 member_id 의 것만 돌려준다.
+
+본인 확인 (10/6): 본인 페이지 API 는 참여 때 정한 숫자 4자리를 X-Member-Pin 헤더로 함께 받는다.
+방 레인 rejoin 과 같은 해시(app/rooms/pin.py)로 확인하고, 5번 틀리면 30초 막는다.
 """
 
-from datetime import date, timedelta
+import time
+from datetime import date
 from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Header, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from app.db import connect, fetch_all, fetch_one
 from app.expenses import bank, classify
 from app.expenses.mockbank.router import router as mockbank_router
+from app.rooms.pin import check_pin
 
 STATIC = Path(__file__).resolve().parents[2] / "static" / "expenses"
-LOOKBACK_DAYS = 7  # 방 시작 며칠 전부터 은행에 묻는다 (기간 밖 거래를 보여주려고)
+MAX_TRIES = 5      # 4자리를 이만큼 틀리면
+LOCK_SECONDS = 30  # 이만큼 막는다
+_tries: dict[int, tuple[int, float]] = {}  # member_id → (틀린 횟수, 풀리는 시각). 서버 메모리에만 둔다
 
 router = APIRouter()
 router.include_router(mockbank_router)  # 가짜 은행: /api/expenses/mockbank/...
@@ -52,13 +59,32 @@ def _member(member_id: int) -> dict:
     return row
 
 
+def _me(member_id: int, pin: str | None) -> dict:
+    """본인 확인을 마친 멤버. 4자리가 없거나 틀리면 401, 정하지 않은 멤버는 403, 여러 번 틀리면 429."""
+    member = _member(member_id)
+    row = fetch_one("select pin_hash from members where id = %s", (member_id,))
+    if not row["pin_hash"]:
+        raise HTTPException(403, "숫자 4자리를 정하지 않은 멤버라 열 수 없어요")
+    count, until = _tries.get(member_id, (0, 0.0))
+    now = time.monotonic()
+    if until > now:
+        raise HTTPException(429, f"여러 번 틀려서 {int(until - now) + 1}초 뒤에 다시 할 수 있어요")
+    if pin and check_pin(pin, row["pin_hash"]):
+        _tries.pop(member_id, None)
+        return member
+    if pin:  # 비어 있는 건 아직 안 넣은 것이라 횟수에 넣지 않는다
+        count += 1
+        _tries[member_id] = (0, now + LOCK_SECONDS) if count >= MAX_TRIES else (count, 0.0)
+    raise HTTPException(401, "숫자 4자리가 맞지 않아요")
+
+
 def _bank_items(member: dict) -> list[dict]:
     """은행 내역을 받아 분류한 결과. 계좌가 없으면 빈 목록."""
     num = member["fintech_use_num"]
     if not num:
         return []
     try:
-        rows = bank.fetch_transactions(num, member["start_date"] - timedelta(days=LOOKBACK_DAYS), member["end_date"])
+        rows = bank.fetch_transactions(num, *classify.fetch_range(member["start_date"], member["end_date"]))
     except bank.BankError as e:
         raise HTTPException(502, f"은행 응답 오류: {e}")
     return classify.classify(num, rows, bank.holder_name(num), member["start_date"], member["end_date"])
@@ -126,6 +152,7 @@ def _summary(member: dict) -> dict:
             "people": r["people"],
             "my_share": 0 if r["excluded"] else _share(r["amount"], r["people"]),
             "excluded": r["excluded"],
+            "auto": r["excluded"] and reasons.get(r["ref"]) == classify.REASON_PREAUTH,  # 화면은 도장만, 조정 칸 없음
             "badges": badges,
         })
 
@@ -169,20 +196,23 @@ class MemberIn(BaseModel):
 
 class ExpenseUpdate(BaseModel):
     member_id: int
-    people: int | None = Field(None, ge=1, le=99)
+    people: int | None = Field(None, ge=1, le=20)  # 화면의 − n + 도 20명까지
     excluded: bool | None = None
 
 
+PIN_HEADER = Header(None, alias="X-Member-Pin")
+
+
 @router.get("/api/expenses/me")
-def my_expenses(member_id: int):
+def my_expenses(member_id: int, pin: str | None = PIN_HEADER):
     """내 목표 · 쓴 돈 · 남은 금액 · 상태 · 내 항목 목록."""
-    return _summary(_member(member_id))
+    return _summary(_me(member_id, pin))
 
 
 @router.post("/api/expenses/import")
-def import_expenses(body: MemberIn):
+def import_expenses(body: MemberIn, pin: str | None = PIN_HEADER):
     """불러오기: 내 계좌의 새 거래를 바로 저장한다 (1명 · 포함, 자동 제외 대상은 제외로)."""
-    member = _member(body.member_id)
+    member = _me(body.member_id, pin)
     _not_gave_up(member)
     if not member["fintech_use_num"]:
         raise HTTPException(409, "계좌가 연결되지 않은 멤버예요")
@@ -192,9 +222,9 @@ def import_expenses(body: MemberIn):
 
 
 @router.patch("/api/expenses/{expense_id}")
-def update_expense(expense_id: int, body: ExpenseUpdate):
+def update_expense(expense_id: int, body: ExpenseUpdate, pin: str | None = PIN_HEADER):
     """몇 명이서 · 제외를 고친다. 바로 저장되고 바뀐 요약을 돌려준다."""
-    member = _member(body.member_id)
+    member = _me(body.member_id, pin)
     _not_gave_up(member)
     row = fetch_one("select member_id from expenses where id = %s", (expense_id,))
     if row is None or row["member_id"] != member["id"]:
@@ -204,13 +234,15 @@ def update_expense(expense_id: int, body: ExpenseUpdate):
             conn.execute("update expenses set people = %s where id = %s", (body.people, expense_id))
         if body.excluded is not None:
             conn.execute("update expenses set excluded = %s where id = %s", (body.excluded, expense_id))
+        # 고치면 다시 조정 완료를 눌러야 한다 (/flow 와 같다, 10/6)
+        conn.execute("update members set confirmed_at = null where id = %s", (member["id"],))
     return _summary(_member(body.member_id))
 
 
 @router.post("/api/expenses/confirm")
-def confirm(body: MemberIn):
+def confirm(body: MemberIn, pin: str | None = PIN_HEADER):
     """조정 완료. 이 시각 뒤에 새 지출이 저장되면 다시 미확인이 된다."""
-    member = _member(body.member_id)
+    member = _me(body.member_id, pin)
     _not_gave_up(member)
     with connect() as conn:
         conn.execute("update members set confirmed_at = now() where id = %s", (member["id"],))

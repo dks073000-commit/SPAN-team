@@ -17,7 +17,7 @@ def presentation_time(monkeypatch):
 
 
 def items():
-    rows = bank.fetch_transactions(A, date(2026, 9, 25), END)
+    rows = bank.fetch_transactions(A, *classify.fetch_range(START, END))
     return classify.classify(A, rows, bank.holder_name(A), START, END)
 
 
@@ -25,8 +25,12 @@ def by_merchant(name):
     return [i for i in items() if i["merchant"] == name]
 
 
+def row(day, hhmm, content, amount, inout="출금"):
+    return {"tran_date": day, "tran_time": hhmm + "00", "inout_type": inout, "print_content": content, "tran_amt": str(amount)}
+
+
 def test_only_withdrawals_are_kept():
-    assert len(items()) == 11  # 출금 11, 입금 2(택시 취소 · 친구정산)는 저장하지 않음
+    assert len(items()) == 10  # 출금 10, 입금 2(택시 취소 · 친구정산)는 저장하지 않음
     assert not by_merchant("친구정산")
 
 
@@ -35,27 +39,45 @@ def test_preauth_pair_is_auto_excluded():
     assert [(t["amount"], t["reason"]) for t in taxis] == [(20000, classify.REASON_PREAUTH), (9800, None)]
 
 
-def test_out_of_period_is_auto_excluded():
-    (meal,) = by_merchant("식당")
-    assert meal["spent_on"] == date(2026, 10, 1) and meal["reason"] == classify.REASON_OUT_OF_PERIOD
+def test_only_room_period_is_kept():
+    """방 기간(1주일) 밖 거래는 저장하지 않는다 (10/6). 마감 다음 날 새벽만 예외."""
+    rows = [
+        row("20261001", "2300", "전날 밤", 1000),
+        row("20261002", "0130", "시작일 새벽", 2000),
+        row("20261002", "1200", "시작일 낮", 3000),
+        row("20261008", "2330", "마감일 밤", 4000),
+        row("20261009", "0200", "마감 다음 날 새벽", 5000),
+        row("20261009", "0600", "마감 다음 날 아침", 6000),
+    ]
+    got = {i["merchant"]: (i["excluded"], i["reason"]) for i in classify.classify(A, rows, "", START, END)}
+    assert got == {
+        "시작일 새벽": (False, classify.REASON_START_DAWN),
+        "시작일 낮": (False, None),
+        "마감일 밤": (False, None),
+        "마감 다음 날 새벽": (True, classify.REASON_END_DAWN),
+    }
 
 
-def test_charge_and_own_transfer_are_candidates():
-    assert by_merchant("간편결제충전")[0]["reason"] == classify.REASON_CHARGE
-    assert by_merchant("이예시")[0]["reason"] == classify.REASON_OWN_TRANSFER
+def test_fetch_range_reaches_the_dawn_after_end():
+    assert classify.fetch_range(START, END) == (START, date(2026, 10, 9))
 
 
-def test_excluded_by_default_only_when_there_is_a_reason():
-    for item in items():
-        assert item["excluded"] == (item["reason"] is not None)
+def test_charge_and_own_transfer_are_kept_with_a_tag():
+    for name in ["간편결제충전", "이예시"]:
+        (item,) = by_merchant(name)
+        assert (item["excluded"], item["reason"]) == (False, classify.REASON_TRANSFER)
+
+
+def test_only_preauth_is_excluded_by_default_in_the_scenario():
+    assert [i["merchant"] for i in items() if i["excluded"]] == ["택시"]
 
 
 def test_scenario_total_after_presenter_choices():
-    """발표자가 통신비 제외 · 편의점 한 건 제외 · 치킨 4명을 고르면 38,400원."""
+    """발표자가 통신비 · 충전 · 내 계좌 이체 · 편의점 한 건을 제외하고 치킨 4명을 고르면 38,400원."""
     total = 0
     seen_store = False
     for item in items():
-        if item["excluded"] or item["merchant"] == "통신비":
+        if item["excluded"] or item["merchant"] in ("통신비", "간편결제충전", "이예시"):
             continue
         if item["merchant"] == "편의점":
             if seen_store:
@@ -72,10 +94,7 @@ def test_ref_is_stable_and_unique():
 
 
 def test_preauth_released_later_than_a_week_is_not_paired():
-    rows = [
-        {"tran_date": "20261002", "tran_time": "100000", "inout_type": "출금", "print_content": "숙소", "tran_amt": "50000"},
-        {"tran_date": "20261012", "tran_time": "100000", "inout_type": "입금", "print_content": "숙소", "tran_amt": "50000"},
-    ]
+    rows = [row("20261002", "1000", "숙소", 50000), row("20261012", "1000", "숙소", 50000, "입금")]
     (item,) = classify.classify(A, rows, "", START, END)
     assert item["reason"] is None
 

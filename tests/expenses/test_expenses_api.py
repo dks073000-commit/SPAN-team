@@ -9,14 +9,17 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import db
+from app.expenses import router as expenses
 from app.expenses.mockbank import router as mockbank
 from app.main import app
+from app.rooms.pin import hash_pin
 
 client = TestClient(app)
 pytestmark = pytest.mark.skipif(not db.ping(), reason="DATABASE_URL 로 DB 에 접속할 수 없음")
 
 A = "BTG00000000000000000000A"
 CODE = "zzexpensetest"
+PIN = "1234"
 
 
 def set_now(monkeypatch, when):
@@ -32,52 +35,61 @@ def room(monkeypatch):
         (CODE,),
     )
     ids = {}
-    for nickname, budget, account in [("발표자", 100000, A), ("예시", 50000, None)]:
+    for nickname, budget, account, pin in [("발표자", 100000, A, PIN), ("예시", 50000, None, "5678"), ("4자리없음", 50000, A, None)]:
         ids[nickname] = db.fetch_one(
-            "insert into members (room_code, nickname, budget, fintech_use_num) values (%s, %s, %s, %s) returning id",
-            (CODE, nickname, budget, account),
+            "insert into members (room_code, nickname, budget, fintech_use_num, pin_hash) values (%s, %s, %s, %s, %s) returning id",
+            (CODE, nickname, budget, account, hash_pin(pin) if pin else None),
         )["id"]
+    expenses._tries.clear()
     yield ids
     db.execute("delete from rooms where code = %s", (CODE,))
 
 
-def load(member_id):
-    return client.post("/api/expenses/import", json={"member_id": member_id}).json()
+def auth(pin=PIN):
+    return {"X-Member-Pin": pin}
 
 
-def me(member_id):
-    return client.get("/api/expenses/me", params={"member_id": member_id}).json()
+def load(member_id, pin=PIN):
+    return client.post("/api/expenses/import", json={"member_id": member_id}, headers=auth(pin)).json()
+
+
+def me(member_id, pin=PIN):
+    return client.get("/api/expenses/me", params={"member_id": member_id}, headers=auth(pin)).json()
+
+
+def confirm(member_id):
+    return client.post("/api/expenses/confirm", json={"member_id": member_id}, headers=auth()).json()
 
 
 def item(summary, merchant, nth=0):
     return [i for i in summary["items"] if i["merchant"] == merchant][nth]
 
 
-def patch(member_id, expense_id, **fields):
-    return client.patch(f"/api/expenses/{expense_id}", json={"member_id": member_id, **fields})
+def patch(member_id, expense_id, pin=PIN, **fields):
+    return client.patch(f"/api/expenses/{expense_id}", json={"member_id": member_id, **fields}, headers=auth(pin))
 
 
 def test_presenter_demo_flow(room, monkeypatch):
     me_id = room["발표자"]
 
-    # 1~6일째 불러오기 (전날)
+    # 1~6일째 불러오기 (전날). 방 기간 안 출금만
     first = load(me_id)
-    assert first["added"] == 10 and first["summary"]["status"] == "미확인"
+    assert first["added"] == 9 and first["summary"]["status"] == "미확인"
     assert load(me_id)["added"] == 0  # 다시 눌러도 두 번 저장되지 않음
 
     s = me(me_id)
     taxis = {i["amount"]: i for i in s["items"] if i["merchant"] == "택시"}
-    assert taxis[20000]["badges"] == ["자동 제외 · 가승인"] and taxis[20000]["excluded"]
+    assert taxis[20000]["badges"] == ["자동 제외 · 가승인"] and taxis[20000]["excluded"] and taxis[20000]["auto"]
     assert taxis[9800]["badges"] == [] and not taxis[9800]["excluded"]
-    assert item(s, "식당")["badges"] == ["자동 제외 · 기간 밖"]
-    assert item(s, "간편결제충전")["badges"] == ["제외 후보 · 충전"]
-    assert item(s, "이예시")["badges"] == ["제외 후보 · 내 계좌 이체"]
-    assert item(s, "편의점")["badges"] == ["중복?"]
+    assert all(i["date"] >= "2026-10-02" for i in s["items"])  # 기간 밖은 저장하지 않음
+    for name in ["간편결제충전", "이예시"]:  # 꼬리표만 달고 포함 (본인이 제외를 고른다, /flow 와 같다)
+        assert (item(s, name)["badges"], item(s, name)["excluded"]) == (["충전·내 계좌 이체일 수 있어요"], False)
+    assert item(s, "편의점")["badges"] == ["중복일 수 있어요"]
 
-    # 발표 전 정리: 통신비 제외, 편의점 한 건 제외, 조정 완료
-    patch(me_id, item(s, "통신비")["id"], excluded=True)
-    patch(me_id, item(s, "편의점", 1)["id"], excluded=True)
-    s = client.post("/api/expenses/confirm", json={"member_id": me_id}).json()
+    # 발표 전 정리: 통신비 · 충전 · 내 계좌 이체 · 편의점 한 건 제외, 조정 완료
+    for name, nth in [("통신비", 0), ("간편결제충전", 0), ("이예시", 0), ("편의점", 1)]:
+        patch(me_id, item(s, name, nth)["id"], excluded=True)
+    s = confirm(me_id)
     assert (s["spent"], s["status"]) == (26400, "조정 완료")
 
     # 발표 당일: 치킨이 1명으로 들어오면 다시 미확인
@@ -91,19 +103,45 @@ def test_presenter_demo_flow(room, monkeypatch):
     # 4명으로 고치고 조정 완료
     s = patch(me_id, chicken["id"], people=4).json()
     assert (item(s, "치킨집")["my_share"], s["spent"], s["remaining"]) == (12000, 38400, 61600)
-    s = client.post("/api/expenses/confirm", json={"member_id": me_id}).json()
+    s = confirm(me_id)
     assert s["status"] == "조정 완료"
 
 
 def test_cannot_touch_someone_elses_item(room):
     load(room["발표자"])
     target = me(room["발표자"])["items"][0]["id"]
-    assert patch(room["예시"], target, people=2).status_code == 404
+    assert patch(room["예시"], target, pin="5678", people=2).status_code == 404
 
 
 def test_member_without_account_cannot_import(room):
-    res = client.post("/api/expenses/import", json={"member_id": room["예시"]})
+    res = client.post("/api/expenses/import", json={"member_id": room["예시"]}, headers=auth("5678"))
     assert res.status_code == 409
+
+
+def test_member_id_alone_is_not_enough(room):
+    """주소의 member_id 만 바꿔서는 남의 상세를 보거나 고칠 수 없다 (10/6)."""
+    me_id = room["발표자"]
+    load(me_id)
+    target = me(me_id)["items"][0]["id"]
+    assert client.get("/api/expenses/me", params={"member_id": me_id}).status_code == 401
+    assert client.get("/api/expenses/me", params={"member_id": me_id}, headers=auth("0000")).status_code == 401
+    assert client.post("/api/expenses/import", json={"member_id": me_id}).status_code == 401
+    assert client.post("/api/expenses/confirm", json={"member_id": me_id}).status_code == 401
+    assert patch(me_id, target, pin="5678", people=2).status_code == 401  # 다른 사람의 4자리
+
+
+def test_member_without_pin_cannot_open(room):
+    assert client.get("/api/expenses/me", params={"member_id": room["4자리없음"]}, headers=auth()).status_code == 403
+
+
+def test_five_wrong_pins_lock_for_a_while(room):
+    me_id = room["발표자"]
+    for _ in range(5):
+        assert client.get("/api/expenses/me", params={"member_id": me_id}, headers=auth("0000")).status_code == 401
+    locked = client.get("/api/expenses/me", params={"member_id": me_id}, headers=auth())
+    assert locked.status_code == 429  # 맞는 번호여도 잠긴 동안은 막는다
+    expenses._tries.clear()
+    assert client.get("/api/expenses/me", params={"member_id": me_id}, headers=auth()).status_code == 200
 
 
 def test_gave_up_member_cannot_change(room):
@@ -117,8 +155,9 @@ def test_gave_up_member_cannot_change(room):
 def test_settle_fills_members_with_accounts_and_skips_others(room):
     res = client.post(f"/api/expenses/rooms/{CODE}/settle").json()
     by_name = {m["nickname"]: m for m in res["members"]}
-    assert by_name["발표자"]["added"] == 10
+    assert by_name["발표자"]["added"] == 9
     assert by_name["예시"]["skipped"] == "계좌 없음"
+    assert set(res) == {"room", "today", "members"}  # 응답 모양은 그대로 (결과 카드 board.js 가 부른다)
     again = client.post(f"/api/expenses/rooms/{CODE}/settle").json()
     assert {m["nickname"]: m.get("added") for m in again["members"]}["발표자"] == 0
     assert "items" not in str(res)  # 상세는 돌려주지 않음
@@ -153,3 +192,11 @@ def test_spent_matches_board_rounding(room):
         (me_id,),
     )
     assert me(me_id)["spent"] == 6666 + 3  # 2.5 → 3 (0.5 는 올림)
+
+
+def test_editing_after_confirm_needs_confirm_again(room):
+    me_id = room["발표자"]
+    load(me_id)
+    assert confirm(me_id)["status"] == "조정 완료"
+    target = me(me_id)["items"][0]["id"]
+    assert patch(me_id, target, people=2).json()["status"] == "미확인"
