@@ -25,16 +25,15 @@ def board_page(code: str):
 # 그래서 시연 중 만든 방 링크는 진짜 링크다 (다른 폰에서 열면 막대 없이 같은 방).
 FLOW = STATIC / "flow"
 
-FLOW_START = """<!doctype html><html lang="ko"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1"><title>텅장방어전 · 발표 모드</title></head>
-<body><p>발표 모드를 켜는 중이에요</p>
-<script>try { localStorage.setItem("flow:demo", "1"); } catch (e) {} location.replace("/");</script>
-</body></html>"""
+ROOMS_INDEX = STATIC.parent / "rooms" / "index.html"   # 실제 방 만들기 화면 (방 레인 파일, 읽기만)
+DEMO_ON = '<script>try { localStorage.setItem("flow:demo", "1"); } catch (e) {}</script>'
 
 
 @router.get("/flow", include_in_schema=False)
 def flow_start():
-    return HTMLResponse(FLOW_START)
+    # 중간 화면 없이 바로 실제 방 만들기를 보여 주고, 같은 자리에서 발표 모드를 켠다 (시연 막대가 바로 뜬다)
+    page = ROOMS_INDEX.read_text(encoding="utf-8").replace("<head>", "<head>" + DEMO_ON, 1)
+    return HTMLResponse(page)
 
 
 @router.get("/flow/privacy", include_in_schema=False)

@@ -169,7 +169,7 @@ def test_api_unknown_room(monkeypatch):
 def test_flow_is_demo_entry_to_real_pages():
     # /flow 는 발표 모드를 켜고 실제 방 만들기로 보낸다. 예전 가짜 주소는 실제 주소로 넘긴다
     res = client.get("/flow")
-    assert res.status_code == 200 and "flow:demo" in res.text and 'location.replace("/")' in res.text
+    assert res.status_code == 200 and "flow:demo" in res.text and "링크 만들기" in res.text   # 중간 화면 없이 바로 방 만들기
     for old, new in [("/flow/r/abc", "/r/abc"), ("/flow/r/abc/me", "/r/abc/add"), ("/flow/r/abc/board", "/r/abc/board")]:
         res = client.get(old, follow_redirects=False)
         assert res.status_code == 307 and res.headers["location"] == new, old
