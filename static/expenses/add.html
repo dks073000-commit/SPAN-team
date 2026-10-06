@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="/static/board/flow/flow.css">
 </head>
 <body>
-<!-- 내 기록 (지출 레인). 시안: /flow/r/{code}/me (static/board/flow/me.html)
+<!-- 내 기록 (지출 레인). 모양은 UI 가이드(static/board/ui-guide.html) · flow.css 그대로
      화면의 일: 남은 돈을 보고, 다음 할 일 하나(불러오기 → 조정 완료)를 한다. 다른 사람 순위는 없다 (10/3)
      본인 확인: 참여 때 정한 숫자 4자리를 한 번 묻고 이 브라우저에 기억한다. API 는 X-Member-Pin 헤더로 확인한다 (10/6) -->
 <main id="page" aria-live="polite"><p class="muted">불러오는 중이에요</p></main>
@@ -55,6 +55,7 @@
     let summary = null;
     let flash = "";
     let pinError = "";
+    let justConfirmed = false;   // 방금 조정 완료를 눌렀으면 도장이 쾅 찍히는 모션 (한 번만)
     let editing = false;     // 조정 완료 뒤 '수정하기'를 눌러 다시 고치는 중
     let focusKey = "";       // 인원 − + 를 누른 뒤 다시 그려도 같은 버튼에 초점을 둔다
     let busy = false;
@@ -182,6 +183,8 @@
 
       const rows = items.map((e) => {
         const sub = [`<span class="when">${md(e.date)}</span>`];
+        // 결제 시간: 지출 API 가 time(spent_time)을 내보내기 시작하면 날짜 옆에 붙는다. 없으면 날짜만
+        if (e.time) sub.push(`<span class="when"><span class="n">${esc(String(e.time).slice(0, 5))}</span></span>`);
         if (e.people > 1 && !e.excluded) sub.push(`<span class="when">내 몫 <span class="n">${won(e.my_share)}</span>원</span>`);
         const hints = e.badges.filter((b) => !b.startsWith("자동 제외"));
 
@@ -225,8 +228,8 @@
         ${!hasItems ? `<hr>${action}` : ""}
         ${hasItems ? `
           <section class="panel${locked && !gaveUp ? " is-locked" : ""}" aria-label="불러온 거래">
-            ${locked && !gaveUp ? '<span class="stamp stamp-blue done-stamp">조정 완료</span>' : ""}
-            <p class="list-head"><span>불러온 거래 <span class="n">${items.length}</span>건</span>${gaveUp || locked ? "" : '<button type="button" id="load" class="text-btn">새로 불러오기</button>'}</p>
+            ${locked && !gaveUp ? `<span class="stamp stamp-blue done-stamp${justConfirmed ? " is-stamping" : ""}">조정 완료</span>` : ""}
+            <p class="list-head"><span>불러온 거래 <span class="n">${items.length}</span>건</span>${gaveUp || locked ? "" : '<button type="button" id="load" class="reload-btn">새로 불러오기</button>'}</p>
             <p class="privacy-note">이 목록은 나만 봐요 · 친구에게는 총액만 보여요</p>
             <ul class="list">${rows}</ul>
             ${action}
@@ -272,7 +275,9 @@
         summary = await api("POST", "/api/expenses/confirm", body);
         editing = false;
         flash = "조정 완료. 결과 카드에 이대로 들어가요";
+        justConfirmed = true;
         render();
+        justConfirmed = false;
         window.scrollTo(0, 0);
       }));
       const edit = document.getElementById("edit");
@@ -369,7 +374,7 @@
         <a href="/r/${enc}/board">${ICON.result}<span>결과${info.result_open ? "" : ` <em>${ICON.lock}D-${info.days_left}</em>`}</span></a>`;
     }
 
-    // 바닥글: 모든 화면 맨 아래 개인정보 처리방침 링크 (보드 레인 store.js footer 와 같은 모양)
+    // 바닥글: 모든 화면 맨 아래 개인정보 처리방침 링크 (.site-foot, 모든 화면 같은 모양)
     const foot = document.createElement("footer");
     foot.className = "site-foot";
     foot.innerHTML = '<a class="sf-privacy" href="/flow/privacy">개인정보 처리방침</a>'
@@ -381,5 +386,7 @@
     else load();
   })();
 </script>
+<!-- 발표 모드(/flow 로 들어온 브라우저)에서만 위에 시연 막대를 띄운다. 일반 사용자에게는 아무것도 안 한다 -->
+<script src="/static/board/flow/demo-bar.js" defer></script>
 </body>
 </html>

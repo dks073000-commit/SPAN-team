@@ -166,12 +166,16 @@ def test_api_unknown_room(monkeypatch):
     assert client.get("/api/board/nope").status_code == 404
 
 
-def test_flow_demo_pages_open():
-    # 시연용 전체 흐름: 방 만들기 → 방 홈 → 내 페이지 → 결과 카드 (데이터는 브라우저에만 있다)
-    for path, marker in [("/flow", "링크 만들기"), ("/flow/r/demo", "flow/store.js"),
-                         ("/flow/r/demo/me", "내 페이지"), ("/flow/r/demo/board", "board.js")]:
-        res = client.get(path)
-        assert res.status_code == 200 and marker in res.text, path
+def test_flow_is_demo_entry_to_real_pages():
+    # /flow 는 발표 모드를 켜고 실제 방 만들기로 보낸다. 예전 가짜 주소는 실제 주소로 넘긴다
+    res = client.get("/flow")
+    assert res.status_code == 200 and "flow:demo" in res.text and "링크 만들기" in res.text   # 중간 화면 없이 바로 방 만들기
+    for old, new in [("/flow/r/abc", "/r/abc"), ("/flow/r/abc/me", "/r/abc/add"), ("/flow/r/abc/board", "/r/abc/board")]:
+        res = client.get(old, follow_redirects=False)
+        assert res.status_code == 307 and res.headers["location"] == new, old
+    # 실제 화면마다 시연 막대 스크립트가 한 줄 있다 (발표 모드인 브라우저에서만 뜬다)
+    for path in ["/", "/r/demo", "/r/demo/add", "/r/demo/board"]:
+        assert "/static/board/flow/demo-bar.js" in client.get(path).text, path
 
 
 def test_privacy_policy_page_and_footer():
@@ -181,5 +185,5 @@ def test_privacy_policy_page_and_footer():
     for must in ["처리 목적", "보유 기간", "처리 위탁", "국외 이전", "보호책임자"]:
         assert must in res.text, must
     # 결과 화면에도 바닥글 링크가 있다
-    assert "/flow/privacy" in client.get("/flow/r/demo/board").text
+    assert "/flow/privacy" in client.get("/r/demo/board").text
 
