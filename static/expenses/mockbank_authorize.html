@@ -2,68 +2,110 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#e4e4e9">
   <title>가상은행 · 계좌 연결</title>
-  <link rel="stylesheet" href="/static/common.css">
-  <style>
-    .bank { font-weight: 700; color: var(--accent); margin: 0 0 4px; }
-    .note { background: #f3f4f6; border-radius: 8px; padding: 12px; font-size: 14px; color: var(--muted); }
-    .steps { display: flex; gap: 6px; list-style: none; padding: 0; margin: 0 0 16px; font-size: 13px; color: var(--muted); }
-    .steps li { flex: 1; text-align: center; padding: 6px 0; border-bottom: 3px solid var(--line); }
-    .steps li.now { color: var(--text); font-weight: 700; border-color: var(--accent); }
-    .steps li.done { border-color: var(--accent); }
-    ul.scope { padding-left: 20px; }
-    .agree-line { display: flex; gap: 8px; align-items: center; margin: 16px 0 0; }
-    .pick { display: flex; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin: 8px 0; }
-    .pick:has(input:checked) { border-color: var(--accent); background: #eff6ff; }
-    .pick input, .agree-line input { width: auto; flex: none; margin: 0; }
-    .pick span { display: flex; flex-direction: column; flex: 1; }
-    .pick small { color: var(--muted); }
-    .actions { display: flex; gap: 8px; margin-top: 24px; }
-    .actions button { flex: 1; padding: 12px; font-size: 16px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--text); }
-    .actions .primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
-    .actions .primary:disabled { opacity: .4; }
-  </style>
+  <!-- 화면은 보드 레인 시안 /flow (static/board/flow/room.html 의 ② 은행 연결 · ③ 계좌 선택 단계)를 그대로 옮겼다.
+       기능은 그대로: form action · hidden input(redirect_uri, state) · 계좌 칸(서버가 아래 계좌 자리 주석에 넣음) -->
+  <link rel="stylesheet" href="/static/board/common-proposal.css">
+  <link rel="stylesheet" href="/static/board/flow/flow.css">
 </head>
 <body>
-<main>
-  <p class="bank">가상은행</p>
-  <h1>계좌 연결</h1>
-  <p class="note">시연용 가상 계좌입니다. 실제 은행·계좌와 연결되지 않습니다.<br>
-    실제 서비스에서는 이 자리에 은행 본인 인증 화면이 뜹니다.</p>
+<!-- 실제 오픈뱅킹이면 이 자리에 은행 본인 인증 · 정보 제공 동의 화면이 뜬다. 가짜 은행은 인증 · 토큰을 생략한다 -->
+<main id="page" class="flow-step">
+  <p class="brand">텅장방어전</p>
+  <ol class="stepper" aria-label="참여 단계">
+    <li class="is-done">정보 입력</li><li id="step-2" class="is-now" aria-current="step">은행 연결</li><li id="step-3">계좌 선택</li>
+  </ol>
 
-  <ol class="steps"><li id="step-1" class="now">① 동의</li><li id="step-2">② 계좌 선택</li></ol>
-
-  <form method="post" action="/api/expenses/mockbank/oauth/2.0/authorize">
+  <form method="post" action="/api/expenses/mockbank/oauth/2.0/authorize" id="bank-form">
     <input type="hidden" name="redirect_uri" id="redirect_uri">
     <input type="hidden" name="state" id="state">
 
-    <!-- ① 동의 -->
-    <section id="consent">
-      <p><strong>텅장방어전</strong> 앱이 아래 정보를 조회하도록 허락할까요?</p>
+    <!-- ② 은행 연결 동의 -->
+    <div class="step-body" id="consent">
+      <button type="button" class="text-btn back cancel">이전으로</button>
+      <h1 class="consent-title">계좌 조회를 허락해 주세요</h1>
+      <p class="muted consent-sub" id="period">이 방 기간의 출금 내역만 봐요</p>
       <ul class="scope">
-        <li>고른 계좌의 출금·입금 거래내역</li>
-        <li>텅장방어전은 송금·결제를 할 수 없어요 (조회만)</li>
-        <li>잔액과 계좌 주인 이름은 앱에 저장되지 않아요</li>
+        <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg></span><div><b>텅장방어전이 보는 것</b><span>날짜 · 금액 · 가게 이름</span></div></li>
+        <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></span><div><b>텅장방어전이 못 하는 것</b><span>송금 · 결제 · 비밀번호 저장</span></div></li>
+        <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 4.5a3.2 3.2 0 0 1 0 6.3M18 14.3c1.8.8 3 2.6 3 4.7"/></svg></span><div><b>친구가 보는 것</b><span>총액과 순위만</span></div></li>
+        <li><span class="sc-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg></span><div><b>지우는 때</b><span>마감 30일 뒤 자동으로</span></div></li>
       </ul>
-      <label class="agree-line"><input type="checkbox" id="agree"> [필수] 거래내역 조회에 동의합니다</label>
-      <div class="actions">
-        <button type="button" class="cancel">취소</button>
-        <button type="button" class="primary" id="next" disabled>다음</button>
-      </div>
-    </section>
+      <label class="agree agree-terms"><input type="checkbox" id="agree"><span><b>[필수]</b> 위 내용으로 계좌 조회에 동의해요</span></label>
+      <p class="agree-note">수집 항목 · 보관 기간 · 맡기는 곳 안내 <button type="button" id="terms-open" class="text-btn" aria-haspopup="dialog">자세히 보기</button></p>
 
-    <!-- ② 내 계좌 선택 -->
-    <section id="choose" hidden>
-      <p>이 방에서 쓸 계좌를 골라 주세요. 고른 계좌의 출금 내역만 불러와요.</p>
-      <!--ACCOUNTS-->
-      <div class="actions">
-        <button type="button" class="cancel">취소</button>
-        <button type="submit" class="primary">이 계좌 연결</button>
+      <dialog id="terms" class="terms-sheet" aria-labelledby="terms-title">
+        <div class="ts-panel">
+          <span class="ts-handle" aria-hidden="true"></span>
+          <h2 id="terms-title">동의 내용 자세히 보기</h2>
+          <section>
+            <h3>① 개인정보 수집 · 이용</h3>
+            <dl>
+              <div><dt>받는 곳</dt><dd>텅장방어전 (SPAN 팀)</dd></div>
+              <div><dt>쓰는 목적</dt><dd>이 방의 예산 사용률 계산과 결과 카드</dd></div>
+              <div><dt>받는 항목</dt><dd>닉네임, 예산, 숫자 4자리(알아볼 수 없게 바꿔 저장), 고른 계좌의 출금 날짜 · 시간 · 금액 · 가게 이름</dd></div>
+              <div><dt>보관 기간</dt><dd>방 마감일 다음 날부터 30일이 지나면 방 · 참여자 · 출금 내역을 함께 자동 삭제</dd></div>
+              <div><dt>거부할 권리</dt><dd>동의하지 않아도 돼요. 다만 출금 내역을 불러올 수 없어 이 방에는 참여할 수 없어요</dd></div>
+            </dl>
+            <p class="ts-law">개인정보보호법 제15조 제2항</p>
+          </section>
+          <section>
+            <h3>② 처리 위탁</h3>
+            <dl>
+              <div><dt>Render</dt><dd>서버 운영 (화면을 보여 주고 사용률을 계산)</dd></div>
+              <div><dt>Supabase</dt><dd>데이터베이스 보관 (방 · 참여자 · 출금 내역 저장)</dd></div>
+            </dl>
+            <p class="ts-law">개인정보보호법 제26조</p>
+          </section>
+          <section>
+            <h3>③ 국외 이전</h3>
+            <p>서비스를 쓰는 동안 위 항목이 암호화된 인터넷 연결로 국외 서버에 저장 · 처리돼요.</p>
+            <dl>
+              <div><dt>Render</dt><dd>싱가포르 · Render Services, Inc. (privacy@render.com)</dd></div>
+            </dl>
+            <p>데이터베이스(Supabase)는 서울(대한민국) 서버에 저장해 국외 이전이 아니에요.</p>
+            <p>이전을 원하지 않으면 참여하지 않으면 돼요. 이 경우 이 방에는 참여할 수 없어요.</p>
+            <p class="ts-law">개인정보보호법 제28조의8</p>
+          </section>
+          <section>
+            <h3>④ 금융거래정보 제공</h3>
+            <p>은행이 출금 내역을 텅장방어전에 보내려면 내 동의가 따로 필요해요. 실제 서비스에서는 은행 인증 화면에서 한 번 더 동의해요.</p>
+            <p class="ts-law">금융실명법 제4조 제1항 · 신용정보법 제32조 제1항</p>
+          </section>
+          <p class="ts-more"><a href="/flow/privacy">개인정보 처리방침 전체 보기</a> <br>개인정보 보호책임자 안정훈 <span class="nowrap">010-3822-0720</span></p>
+          <button type="button" class="wide secondary" id="terms-close">닫기</button>
+        </div>
+      </dialog>
+
+      <div class="step-actions">
+        <button type="button" id="next" class="wide" disabled>동의하고 계좌 불러오기</button>
       </div>
-    </section>
+    </div>
+
+    <!-- 계좌 불러오는 중 (실제: 토큰 발급 + 등록계좌조회) -->
+    <div class="step-body" id="loading" hidden>
+      <div class="loading" role="status">
+        <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <p>가상은행에서 계좌를 불러오는 중이에요</p>
+      </div>
+    </div>
+
+    <!-- ③ 내 계좌 선택 -->
+    <div class="step-body" id="choose" hidden>
+      <h1>이 방에서 쓸 계좌를<br>골라 주세요</h1>
+      <p class="muted" id="choose-sub">시연용 가상 계좌 · 고른 계좌의 출금 내역만 불러와요</p>
+      <div class="accounts">
+        <!--ACCOUNTS-->
+      </div>
+      <div class="step-actions">
+        <button type="submit" class="wide">이 계좌로 참여하기</button>
+      </div>
+    </div>
   </form>
 </main>
+<footer class="site-foot"><a class="sf-privacy" href="/flow/privacy">개인정보 처리방침</a><span class="sf-sep" aria-hidden="true">·</span><span>텅장방어전 · SPAN 팀</span></footer>
 <script>
   const params = new URLSearchParams(location.search);
   const back = params.get("redirect_uri") || "/";
@@ -71,15 +113,54 @@
   $("redirect_uri").value = back;
   $("state").value = params.get("state") || "";
 
+  // 계좌 칸(서버가 넣은 <b>상품</b><small>은행 번호</small>)을 시안 모양(은행 상품 + 가린 번호)으로 다시 쓴다. input 은 그대로
+  document.querySelectorAll("label.pick").forEach(label => {
+    const span = label.querySelector("span");
+    const product = span.querySelector("b");
+    const small = span.querySelector("small");
+    if (!product || !small) return;
+    const [bank, ...rest] = small.textContent.trim().split(" ");
+    span.textContent = `${bank} ${product.textContent}`;
+    const sub = document.createElement("span");
+    sub.className = "pick-sub";
+    sub.textContent = rest.join(" ");
+    span.appendChild(sub);
+  });
+  const count = document.querySelectorAll("label.pick").length;
+  if (count) $("choose-sub").innerHTML = `연결된 계좌 <span class="n">${count}</span>개 · 시연용 가상 계좌 · 고른 계좌의 출금 내역만 불러와요`;
+
+  // 방 기간 (돌아갈 방 주소 /r/{code} 에서 방을 읽는다. 못 읽으면 기본 문장 그대로)
+  const WD = ["일", "월", "화", "수", "목", "금", "토"];
+  const md = s => { const [y, m, d] = s.split("-").map(Number); const t = new Date(y, m - 1, d); return `${t.getMonth() + 1}/${t.getDate()}(${WD[t.getDay()]})`; };
+  const roomCode = (back.match(/^\/r\/([^/?#]+)/) || [])[1];
+  if (roomCode) fetch(`/api/rooms/${roomCode}`).then(r => r.ok ? r.json() : null).then(room => {
+    if (room) $("period").textContent = `${md(room.start_date)} ~ ${md(room.end_date)} 출금 내역만 봐요`;
+  }).catch(() => {});
+
+  // ② 동의 → 불러오는 중 → ③ 계좌 선택
   $("agree").addEventListener("change", e => { $("next").disabled = !e.target.checked; });
   $("next").addEventListener("click", () => {
+    if (!$("agree").checked) return;
     $("consent").hidden = true;
-    $("choose").hidden = false;
-    $("step-1").className = "done";
-    $("step-2").className = "now";
+    $("loading").hidden = false;
+    setTimeout(() => {
+      $("loading").hidden = true;
+      $("choose").hidden = false;
+      $("step-2").className = "is-done";
+      $("step-2").removeAttribute("aria-current");
+      $("step-3").className = "is-now";
+      $("step-3").setAttribute("aria-current", "step");
+      window.scrollTo(0, 0);
+    }, 900);
   });
 
-  // 취소: 아무것도 연결하지 않고 들어오기 전 화면으로 그냥 돌아간다
+  // 자세히 보기: 닫기 버튼 · 바깥 탭 · ESC 로 닫힘
+  const terms = $("terms");
+  $("terms-open").addEventListener("click", () => { if (terms.showModal) terms.showModal(); else terms.setAttribute("open", ""); });
+  $("terms-close").addEventListener("click", () => terms.close ? terms.close() : terms.removeAttribute("open"));
+  terms.addEventListener("click", e => { if (e.target === terms) terms.close(); });
+
+  // 이전으로: 아무것도 연결하지 않고 들어오기 전 화면으로 돌아간다
   for (const button of document.querySelectorAll(".cancel")) {
     button.addEventListener("click", () => {
       if (history.length > 1) history.back();

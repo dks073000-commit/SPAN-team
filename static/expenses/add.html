@@ -182,6 +182,8 @@
 
       const rows = items.map((e) => {
         const sub = [`<span class="when">${md(e.date)}</span>`];
+        // 결제 시간: 지출 API 가 time(spent_time)을 내보내기 시작하면 날짜 옆에 붙는다. 없으면 날짜만
+        if (e.time) sub.push(`<span class="when"><span class="n">${esc(String(e.time).slice(0, 5))}</span></span>`);
         if (e.people > 1 && !e.excluded) sub.push(`<span class="when">내 몫 <span class="n">${won(e.my_share)}</span>원</span>`);
         const hints = e.badges.filter((b) => !b.startsWith("자동 제외"));
 
@@ -226,7 +228,7 @@
         ${hasItems ? `
           <section class="panel${locked && !gaveUp ? " is-locked" : ""}" aria-label="불러온 거래">
             ${locked && !gaveUp ? '<span class="stamp stamp-blue done-stamp">조정 완료</span>' : ""}
-            <p class="list-head"><span>불러온 거래 <span class="n">${items.length}</span>건</span>${gaveUp || locked ? "" : '<button type="button" id="load" class="text-btn">새로 불러오기</button>'}</p>
+            <p class="list-head"><span>불러온 거래 <span class="n">${items.length}</span>건</span>${gaveUp || locked ? "" : '<button type="button" id="load" class="reload-btn">새로 불러오기</button>'}</p>
             <p class="privacy-note">이 목록은 나만 봐요 · 친구에게는 총액만 보여요</p>
             <ul class="list">${rows}</ul>
             ${action}

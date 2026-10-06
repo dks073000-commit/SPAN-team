@@ -411,3 +411,17 @@ body:has(dialog[open]) { overflow: hidden; }
 .terms-sheet .ts-more a { color: var(--ink); font-weight: 700; text-underline-offset: 3px; }
 .terms-sheet section p + dl, .terms-sheet section dl + p { margin-top: 8px; }
 .terms-sheet .ts-more .nowrap { white-space: nowrap; }
+
+/* 10/7: 내 기록 "새로 불러오기"는 글자 버튼이 아니라 박스 버튼 (눌러야 할 일이라 잘 보이게) */
+.list-head { gap: 10px; }
+.list-head .reload-btn {
+  flex: none; min-height: 44px; padding: 0 16px; border-radius: 12px;
+  border: 1.5px solid var(--ink, #1c1c21); background: var(--paper, #fff); color: var(--ink, #1c1c21);
+  font: inherit; font-size: 15px; font-weight: 700; cursor: pointer; width: auto;
+}
+.list-head .reload-btn:active { transform: translateY(1px); }
+.list-head .reload-btn:focus-visible { outline: 2px solid var(--ink, #1c1c21); outline-offset: 2px; }
+
+/* 10/7: 가짜 은행 화면처럼 단계가 form 안에 있을 때도 버튼이 맨 아래에 붙게 */
+main.flow-step > form { flex: 1; display: flex; flex-direction: column; }
+main.flow-step > form > .step-body:not([hidden]) { flex: 1; }
