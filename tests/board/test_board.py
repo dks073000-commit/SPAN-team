@@ -172,3 +172,14 @@ def test_flow_demo_pages_open():
                          ("/flow/r/demo/me", "내 페이지"), ("/flow/r/demo/board", "board.js")]:
         res = client.get(path)
         assert res.status_code == 200 and marker in res.text, path
+
+
+def test_privacy_policy_page_and_footer():
+    # 개인정보 처리방침은 홈페이지에 계속 보여야 한다 (개인정보보호법 30조 · 시행령 31조 2항)
+    res = client.get("/flow/privacy")
+    assert res.status_code == 200
+    for must in ["처리 목적", "보유 기간", "처리 위탁", "국외 이전", "보호책임자"]:
+        assert must in res.text, must
+    # 결과 화면에도 바닥글 링크가 있다
+    assert "/flow/privacy" in client.get("/flow/r/demo/board").text
+

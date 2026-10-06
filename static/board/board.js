@@ -110,11 +110,40 @@
       const me = params.has("guest") ? null : Number(params.get("me")) || data.sample_me;
       return { data, me };
     }
+    let data = await fetchBoard();
+    // 마감 자동 반영: 결과가 열리는 날(또는 시연 미리 보기)에만, 본인이 불러오기를 안 눌렀어도 거래가 반영되게 한다.
+    // 지출 레인 API 를 화면에서 부른다 (레인끼리 import 하지 않는다, CLAUDE.md). 기간 중에는 부르지 않는다:
+    // 남의 거래가 저장되면 그 사람이 갑자기 미확인이 되기 때문이다. 실패해도 결과 카드는 그대로 연다.
+    if (data.room && (data.room.result_open || data.room.preview) && await settle()) {
+      data = await fetchBoard().catch(() => data);
+    }
+    return { data, me: myId() };
+  }
+
+  async function fetchBoard() {
     const q = wantPreview ? "?preview=1" : "";
     const res = await fetch(`/api/board/${encodeURIComponent(code)}${q}`, { cache: "no-store" });
     if (res.status === 404) throw Object.assign(new Error("missing"), { kind: "missing" });
     if (!res.ok) throw Object.assign(new Error("server"), { kind: "server" });
-    return { data: await res.json(), me: myId() };
+    return res.json();
+  }
+
+  // POST /api/expenses/rooms/{code}/settle (지출 레인). 금액 · 상세는 돌려주지 않는다. 새로 저장한 게 있으면 true
+  async function settle() {
+    const ctrl = typeof AbortController === "function" ? new AbortController() : null;
+    const timer = ctrl ? setTimeout(() => ctrl.abort(), 8000) : null;
+    try {
+      const res = await fetch(`/api/expenses/rooms/${encodeURIComponent(code)}/settle`, {
+        method: "POST", cache: "no-store", signal: ctrl ? ctrl.signal : undefined,
+      });
+      if (!res.ok) return false;   // 404 · 은행 오류: 무시하고 지금 결과로 그린다
+      const body = await res.json();
+      return (body.members || []).some((m) => Number(m.added) > 0);
+    } catch (e) {
+      return false;                // 네트워크 오류 · 8초 넘김
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 
   function head(room) {
@@ -162,7 +191,7 @@
       ${head(room)}
       <hr class="r-cut">
       <section class="r-seal r-reveal" style="--i:1" aria-label="결과 공개까지 남은 날">
-        <p class="seal-d"><span class="num n">${dday}</span><span class="stamp stamp-lg stamp-gray">봉인</span></p>
+        <p class="seal-d"><span class="num n">${dday}</span></p>
         <p class="seal-lead">${lead}</p>
       </section>
       <hr class="r-cut">
@@ -175,7 +204,12 @@
         <p class="seal-who">참전 <span class="n">${count}</span>명</p>
         <ul class="lineup">${players.map((p) => `
           <li class="player">${token(p.member_id, p.nickname, p.member_id === me ? "is-me" : "")}<span class="pname">${esc(p.nickname)}</span></li>`).join("")}</ul>
+        <p class="invite-row"><button type="button" class="invite-copy" id="invite-copy">초대 링크 복사</button></p>
+        <p class="privacy-note">결과 날에도 친구에게는 총액만 보여요</p>
       </section>`;
+    // 친구 더 부르기: 참여한 뒤에는 방 홈으로 못 돌아가니 링크를 여기서 다시 꺼낸다
+    // (시연 흐름은 방 이름 · 기간을 담은 링크라 다른 폰에서도 열린다)
+    $("invite-copy").addEventListener("click", (ev) => copyInvite(ev.currentTarget));
     // 시연 흐름에서 참여한 사람은 아래 고정 탭 [내 기록 | 결과] 로 오가니 버튼을 겹쳐 두지 않는다
     const tabbed = isFlow && document.body.classList.contains("has-tabbar");
     $("actions").innerHTML = tabbed ? ""
@@ -183,6 +217,25 @@
       : `<a class="btn" href="${roomPage}">이 방에 참여하기</a>`;
     $("actions").hidden = tabbed;
     document.title = `${room.name} · ${dday}`;
+  }
+
+  function inviteLink() {
+    if (isFlow && window.Flow && window.Flow.roomLink) return window.Flow.roomLink(code);
+    return `${location.origin}/r/${encodeURIComponent(code)}`;
+  }
+
+  async function copyInvite(btn) {
+    const link = inviteLink();
+    const done = (msg) => {
+      btn.textContent = msg;
+      setTimeout(() => { btn.textContent = "초대 링크 복사"; }, 1800);
+    };
+    try {
+      await navigator.clipboard.writeText(link);
+      done("복사했어요");
+    } catch (e) {
+      window.prompt("이 링크를 복사해 단톡방에 보내 주세요", link);   // 복사 권한이 없는 브라우저
+    }
   }
 
   /* ---------- 조정 먼저: 내가 미확인일 때 ---------- */
@@ -203,11 +256,11 @@
 
   /* ---------- 결산 영수증 (결과 카드) ---------- */
 
-  // 결산 도장: 항복 → 항복, 넘김 → 다음엔 버틴다, 1위 → 버티기 장인, 예산 안 → 완주
+  // 결산 도장: 항복 → 항복, 넘김 → 텅장 엔딩, 1위 → 방어전 MVP, 예산 안 → 완주
   function verdict(m) {
     if (m.gave_up) return { text: "항복", cls: "stamp-gray" };
-    if (m.over) return { text: "다음엔 버틴다", cls: "stamp-red" };
-    if (m.rank === 1) return { text: "버티기 장인", cls: "stamp-blue" };
+    if (m.over) return { text: "텅장 엔딩", cls: "stamp-red" };
+    if (m.rank === 1) return { text: "방어전 MVP", cls: "stamp-blue" };
     return { text: "완주", cls: "stamp-blue" };
   }
 
@@ -250,10 +303,10 @@
             ${token(m.member_id, m.nickname, m.gave_up ? "is-quit" : isMe ? "is-me" : "")}
             <span class="name">${esc(m.nickname)}</span>
             ${isMe ? '<span class="me-tag">나</span>' : ""}
+            <span class="stamp ${v.cls}">${v.text}</span>
             ${m.unconfirmed ? '<span class="unc-tag">미확인</span>' : ""}
           </span>
           <span class="pct">${m.gave_up ? "" : m.usage_pct + "%"}</span>
-          <span class="stamp ${v.cls}">${v.text}</span>
         </li>`;
     }).join("");
 
@@ -272,11 +325,7 @@
       <dl class="s-total r-reveal" style="--i:${members.length + 5}">
         <div><dt>예산 안에서 버틴 사람</dt><dd><span class="n">${finishers}</span> / <span class="n">${members.length}</span>명</dd></div>
         <div><dt>다 같이 남긴 돈</dt><dd><span class="n">${won(kept)}</span>원</dd></div>
-      </dl>
-      <hr class="r-cut">
-      <footer class="r-foot r-reveal" style="--i:${members.length + 6}">
-        <p>${room.preview ? `${md(room.today)}까지 기록 · 미리 보기` : `${md(room.end_date)} 마감 결산`} · 다른 사람은 총액만</p>
-      </footer>`;
+      </dl>`;
 
     lastResult = { data, me };
     $("actions").innerHTML = `

@@ -22,8 +22,8 @@
   <form id="create" class="form" novalidate>
     <label>방 이름 <input name="name" maxlength="40" placeholder="예: 10월 둘째 주 방어전" autocomplete="off"></label>
     <div class="two">
-      <label>시작 <input type="date" name="start" value="2026-10-02"></label>
-      <label>마감 <input type="date" name="end" value="2026-10-08"></label>
+      <label>시작 <input type="date" name="start"></label>
+      <label>마감 <input type="date" name="end"></label>
     </div>
     <p class="danger" id="error" role="alert"></p>
     <button type="submit">링크 만들기</button>
@@ -36,6 +36,17 @@
     Flow.toolbar(null);
     const form = document.getElementById("create");
     const error = document.getElementById("error");
+    // 기간 기본값: 시작 = 오늘, 마감 = 시작 + 6일 (일주일). 둘 다 고칠 수 있다. toISOString 은 쓰지 않는다
+    const dates = form.elements;
+    dates.start.value = Flow.today();
+    dates.end.value = Flow.addDays(dates.start.value, 6);
+    dates.end.min = dates.start.value;
+    dates.start.addEventListener("change", () => {
+      const start = dates.start.value;
+      if (!start) return;
+      dates.end.min = start;
+      if (!dates.end.value || dates.end.value < start) dates.end.value = Flow.addDays(start, 6);
+    });
     form.addEventListener("submit", (ev) => {
       ev.preventDefault();
       // form.name 은 폼 자신의 name 속성이라 입력칸은 elements 로 꺼낸다
