@@ -175,8 +175,12 @@
         <p class="seal-who">참전 <span class="n">${count}</span>명</p>
         <ul class="lineup">${players.map((p) => `
           <li class="player">${token(p.member_id, p.nickname, p.member_id === me ? "is-me" : "")}<span class="pname">${esc(p.nickname)}</span></li>`).join("")}</ul>
+        <p class="invite-row"><button type="button" class="invite-copy" id="invite-copy">초대 링크 복사</button></p>
         <p class="privacy-note">결과 날에도 친구에게는 총액만 보여요</p>
       </section>`;
+    // 친구 더 부르기: 참여한 뒤에는 방 홈으로 못 돌아가니 링크를 여기서 다시 꺼낸다
+    // (시연 흐름은 방 이름 · 기간을 담은 링크라 다른 폰에서도 열린다)
+    $("invite-copy").addEventListener("click", (ev) => copyInvite(ev.currentTarget));
     // 시연 흐름에서 참여한 사람은 아래 고정 탭 [내 기록 | 결과] 로 오가니 버튼을 겹쳐 두지 않는다
     const tabbed = isFlow && document.body.classList.contains("has-tabbar");
     $("actions").innerHTML = tabbed ? ""
@@ -184,6 +188,25 @@
       : `<a class="btn" href="${roomPage}">이 방에 참여하기</a>`;
     $("actions").hidden = tabbed;
     document.title = `${room.name} · ${dday}`;
+  }
+
+  function inviteLink() {
+    if (isFlow && window.Flow && window.Flow.roomLink) return window.Flow.roomLink(code);
+    return `${location.origin}/r/${encodeURIComponent(code)}`;
+  }
+
+  async function copyInvite(btn) {
+    const link = inviteLink();
+    const done = (msg) => {
+      btn.textContent = msg;
+      setTimeout(() => { btn.textContent = "초대 링크 복사"; }, 1800);
+    };
+    try {
+      await navigator.clipboard.writeText(link);
+      done("복사했어요");
+    } catch (e) {
+      window.prompt("이 링크를 복사해 단톡방에 보내 주세요", link);   // 복사 권한이 없는 브라우저
+    }
   }
 
   /* ---------- 조정 먼저: 내가 미확인일 때 ---------- */

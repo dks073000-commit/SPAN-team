@@ -525,3 +525,12 @@ mark {
 
 /* 10/6: 결과 카드 꼬리를 지운 대신, 기간 중 화면에 "총액만" 안내를 남긴다 */
 .privacy-note { margin: 14px 0 0; font-size: 13px; line-height: 1.5; color: var(--ink-soft); }
+/* 마감 전 화면: 참전 줄 아래 초대 링크 복사 (밑줄 글자 버튼, 터치 영역 44px) */
+.invite-row { margin: 10px 0 0; }
+.invite-copy {
+  min-height: 44px; padding: 0; border: 0; background: none; cursor: pointer;
+  font: inherit; font-size: 14px; font-weight: 700; color: var(--ink);
+  text-decoration: underline; text-underline-offset: 3px;
+}
+.invite-copy:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; border-radius: 4px; }
+.invite-row + .privacy-note { margin-top: 0; }
