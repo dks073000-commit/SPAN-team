@@ -236,6 +236,10 @@ window.Flow = (function () {
 
   /* ---------- 불러오기 · 조정 (확인 화면 규칙: docs/BUILD_ORDER.md) ---------- */
 
+  // 새벽(0시 ~ 6시 전) 결제는 전날 밤 활동의 연장일 수 있다: 불러오되 스스로 제외를 고르게 꼬리표로 알려 준다
+  const DAWN_END = "06:00";
+  const isDawn = (time) => Boolean(time) && time < DAWN_END;
+
   function importTx(code, memberId) {
     const state = load(code);
     const me = member(state, memberId);
@@ -245,18 +249,26 @@ window.Flow = (function () {
     const deposits = rows.filter((r) => r.inout === "입금");
     const out = rows.filter((r) => r.inout === "출금");
     const stamp = now().getTime();
+    const { start_date, end_date } = state.room;
+    const nextDay = addDays(end_date, 1);
     let added = 0;
     out.forEach((r) => {
       if (saved.has(r.ref)) return;  // 이미 저장한 거래는 두 번 저장하지 않는다
+      // 기간 안 거래만 불러온다 (10/6). 예외: 마감 다음 날 새벽은 마감 날 밤에 쓴 것일 수 있어 불러오되 제외해 둔다
+      const inPeriod = r.date >= start_date && r.date <= end_date;
+      const lateNight = r.date === nextDay && isDawn(r.time);
+      if (!inPeriod && !lateNight) return;
       let auto = null;
       let hint = null;
-      if (r.date < state.room.start_date || r.date > state.room.end_date) auto = "기간 밖";
-      else if (deposits.some((d) => d.content === r.content && d.amount === r.amount && d.when >= r.when)) auto = "가승인 취소";
+      let excluded = false;
+      if (deposits.some((d) => d.content === r.content && d.amount === r.amount && d.when >= r.when)) auto = "가승인 취소";
+      else if (lateNight) { hint = "마감 날 밤 결제일 수도 있어요"; excluded = true; }
+      else if (r.date === start_date && isDawn(r.time)) hint = "시작 전날 밤 결제일 수도 있어요";
       else if (/충전/.test(r.content) || r.content === owner) hint = "충전·내 계좌 이체일 수 있어요";
       else if (out.some((o) => o.ref !== r.ref && o.date === r.date && o.content === r.content && o.amount === r.amount)) hint = "중복일 수 있어요";
       state.expenses.push({
         member_id: memberId, ref: r.ref, merchant: r.content, amount: r.amount, people: 1,
-        excluded: auto !== null, auto, hint, spent_on: r.date, time: r.time, created_at: stamp,
+        excluded: excluded || auto !== null, auto, hint, spent_on: r.date, time: r.time, created_at: stamp,
       });
       added += 1;
     });
