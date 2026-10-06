@@ -50,3 +50,6 @@ create table if not exists expenses (
 );
 
 create index if not exists expenses_member_id_idx on expenses(member_id);
+
+-- 10/6 (이태윤 요청): 결제 시간. 가짜 은행 거래의 tran_time 을 담는다. 직접 입력이나 예전 행은 비어 있어도 된다
+alter table expenses add column if not exists spent_time time;

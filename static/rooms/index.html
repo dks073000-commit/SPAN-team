@@ -42,12 +42,26 @@
     <a id="go" class="button wide go" href="#">방으로 가기</a>
   </section>
 </main>
+<!-- 바닥글: 모든 화면 맨 아래 개인정보 처리방침 (개인정보보호법 30조 · 시행령 31조 2항) -->
+<footer class="site-foot"><a class="sf-privacy" href="/privacy">개인정보 처리방침</a><span class="sf-sep" aria-hidden="true">·</span><span>텅장방어전 · SPAN 팀</span></footer>
 <script>
   const form = document.getElementById("create");
-  const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-  const today = new Date();
-  form.start_date.value = iso(today);
-  form.end_date.value = iso(new Date(today.getTime() + 6 * 86400000));
+  // 기간 기본값: 시작 = 오늘(한국 시간), 마감 = 시작 + 6일 (일주일). 둘 다 고칠 수 있다.
+  // toISOString 은 UTC 라 오전 9시 전에 하루 전 날짜가 되므로 쓰지 않고, 이 기기의 날짜로 만든다 (CLAUDE.md 시간대 규칙)
+  const pad = n => String(n).padStart(2, "0");
+  const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const addDays = (s, n) => { const [y, m, d] = s.split("-").map(Number); return ymd(new Date(y, m - 1, d + n)); };
+  const dates = form.elements;
+  dates.start_date.value = ymd(new Date());
+  dates.end_date.value = addDays(dates.start_date.value, 6);
+  dates.end_date.min = dates.start_date.value;
+  // 시작일을 바꾸면 마감이 시작보다 앞서지 않게: 비었거나 앞서면 시작 + 6일로
+  dates.start_date.addEventListener("change", () => {
+    const start = dates.start_date.value;
+    if (!start) return;
+    dates.end_date.min = start;
+    if (!dates.end_date.value || dates.end_date.value < start) dates.end_date.value = addDays(start, 6);
+  });
 
   form.addEventListener("submit", async e => {
     e.preventDefault();

@@ -21,3 +21,7 @@
 
 /* 참여 중 */
 #joined .me-meta { margin: 0 0 16px; }
+
+/* ② 은행 연결 동의: flow 처럼 [동의하고 계좌 불러오기] 를 영수증 바닥에 (main.flow-step 의 .step-actions 가 margin-top: auto) */
+main.flow-step #consent:not([hidden]) { flex: 1; display: flex; flex-direction: column; }
+#consent .back { display: block; width: fit-content; }
