@@ -49,6 +49,7 @@
       <p class="ds-sub">발표하는 이 브라우저에만 보여요. 친구에게 보낸 링크에는 없어요.</p>
       <div class="ds-list">
         ${code ? row("", "지금 결과 보기", "마감 전이어도 지금 기록으로 결과 카드", `/r/${enc}/board?preview=1`) : ""}
+        ${code ? row("friends", "가상 친구 4명 넣기", "짠돌이 · 카페중독 · 큰손 · 포기각 (실제로 참여시켜요)") : ""}
         ${code && joined ? row("forget", "다른 폰에서 들어온 것처럼", "이 방의 참여 기억을 지우고 방 링크로") : ""}
         ${row("restart", "처음부터 다시", "방 만들기 화면으로")}
         ${row("off", "발표 모드 끄기", "이 막대를 숨겨요. 다시 켜려면 /flow")}
@@ -67,10 +68,56 @@
     if (act === "close") closeSheet();
     if (act === "forget") { drop(`member_id:${code}`); drop(`pin:${code}`); location.href = `/r/${enc}`; }
     if (act === "off") { drop(KEY); location.reload(); }
+    if (act === "friends") addFriends(el);
   };
   bar.addEventListener("click", onAct);
   sheet.addEventListener("click", onAct);
   document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && !sheet.hidden) closeSheet(); });
+
+  // 가상 친구 4명: 실제 참여 API 로 이 방에 넣는다 (가짜 은행 계좌로 연결 → 결과 카드의 자동 반영이 거래를 불러온다).
+  // 결과가 고르게 나오게 예산을 다르게 두고, 둘은 조정 완료 · 하나는 미확인 · 하나는 항복으로 만든다.
+  // 이미 같은 닉네임이 있으면 건너뛴다. 다른 레인 코드를 부르지 않고 공개 API 만 쓴다.
+  const FRIENDS = [
+    { nickname: "짠돌이", budget: 400000, account: "BTG00000000000000000000A", confirm: true },
+    { nickname: "카페중독", budget: 250000, account: "BTG00000000000000000000A", confirm: true },
+    { nickname: "큰손", budget: 150000, account: "BTG00000000000000000000A", confirm: false },
+    { nickname: "포기각", budget: 100000, account: "BTG00000000000000000000S", giveUp: true },
+  ];
+  const FRIEND_PIN = "0000";
+  const post = (url, body, pin) => fetch(url, {
+    method: "POST",
+    headers: Object.assign({ "Content-Type": "application/json" }, pin ? { "X-Member-Pin": pin } : {}),
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  async function addFriends(el) {
+    const label = el.querySelector("span");
+    el.disabled = true;
+    try {
+      const res = await fetch(`/api/rooms/${enc}`, { cache: "no-store" });
+      if (!res.ok) throw new Error("room");
+      const taken = new Set((await res.json()).members.map((mm) => mm.nickname));
+      let added = 0;
+      for (const f of FRIENDS) {
+        if (taken.has(f.nickname)) continue;
+        if (label) label.textContent = `${f.nickname} 넣는 중이에요`;
+        const j = await post(`/api/rooms/${enc}/members`, { nickname: f.nickname, budget: f.budget, pin: FRIEND_PIN, fintech_use_num: f.account });
+        if (!j.ok) continue;
+        const id = (await j.json()).id;
+        added += 1;
+        if (f.confirm) {
+          await post("/api/expenses/import", { member_id: id }, FRIEND_PIN);
+          await post("/api/expenses/confirm", { member_id: id }, FRIEND_PIN);
+        }
+        if (f.giveUp) await post(`/api/rooms/${enc}/members/${id}/give-up`);
+      }
+      if (label) label.textContent = added ? `${added}명 넣었어요` : "이미 다 들어와 있어요";
+      setTimeout(() => location.reload(), 700);
+    } catch (e) {
+      if (label) label.textContent = "넣지 못했어요. 잠시 후 다시 눌러 주세요";
+      el.disabled = false;
+    }
+  }
 
   function mount() {
     // 결과 카드(board.html)는 회색 계산대(.counter) 안 영수증 위에, 나머지는 화면 맨 위에
