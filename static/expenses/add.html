@@ -183,7 +183,7 @@
 
       const rows = items.map((e) => {
         const sub = [`<span class="when">${md(e.date)}</span>`];
-        // 결제 시간: 지출 API 가 time(spent_time)을 내보내기 시작하면 날짜 옆에 붙는다. 없으면 날짜만
+        // 결제 시간(spent_time, "HH:MM")을 날짜 옆에 붙인다. 직접 입력 · 예전 행처럼 시간이 없으면 날짜만
         if (e.time) sub.push(`<span class="when"><span class="n">${esc(String(e.time).slice(0, 5))}</span></span>`);
         if (e.people > 1 && !e.excluded) sub.push(`<span class="when">내 몫 <span class="n">${won(e.my_share)}</span>원</span>`);
         const hints = e.badges.filter((b) => !b.startsWith("자동 제외"));

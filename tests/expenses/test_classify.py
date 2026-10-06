@@ -1,6 +1,6 @@
 """자동 분류와 ref. 발표자 계좌(A) 시나리오로 확인한다. DB 없이 돈다."""
 
-from datetime import date, datetime
+from datetime import date, datetime, time
 
 import pytest
 
@@ -37,6 +37,12 @@ def test_only_withdrawals_are_kept():
 def test_preauth_pair_is_auto_excluded():
     taxis = by_merchant("택시")
     assert [(t["amount"], t["reason"]) for t in taxis] == [(20000, classify.REASON_PREAUTH), (9800, None)]
+
+
+def test_keeps_payment_time():
+    """결제 시간(tran_time)도 같이 넘긴다. 내 기록 화면에서 날짜 옆에 보인다."""
+    got = classify.classify(A, [row("20261003", "1342", "점심", 8000)], "", START, END)
+    assert got[0]["spent_time"] == time(13, 42)
 
 
 def test_only_room_period_is_kept():
