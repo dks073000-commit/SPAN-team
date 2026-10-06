@@ -4,10 +4,9 @@
 남의 지출 상세(상호 · 금액)는 어떤 API 로도 내보내지 않는다. 내 member_id 의 것만 돌려준다.
 
 본인 확인 (10/6): 본인 페이지 API 는 참여 때 정한 숫자 4자리를 X-Member-Pin 헤더로 함께 받는다.
-방 레인 rejoin 과 같은 해시(app/rooms/pin.py)로 확인하고, 5번 틀리면 30초 막는다.
+방 레인 rejoin 과 같은 해시(app/rooms/pin.py)로 확인한다. 틀렸을 때 잠그지는 않는다 (회의 결정).
 """
 
-import time
 from datetime import date
 from pathlib import Path
 
@@ -21,9 +20,6 @@ from app.expenses.mockbank.router import router as mockbank_router
 from app.rooms.pin import check_pin
 
 STATIC = Path(__file__).resolve().parents[2] / "static" / "expenses"
-MAX_TRIES = 5      # 4자리를 이만큼 틀리면
-LOCK_SECONDS = 30  # 이만큼 막는다
-_tries: dict[int, tuple[int, float]] = {}  # member_id → (틀린 횟수, 풀리는 시각). 서버 메모리에만 둔다
 
 router = APIRouter()
 router.include_router(mockbank_router)  # 가짜 은행: /api/expenses/mockbank/...
@@ -60,22 +56,14 @@ def _member(member_id: int) -> dict:
 
 
 def _me(member_id: int, pin: str | None) -> dict:
-    """본인 확인을 마친 멤버. 4자리가 없거나 틀리면 401, 정하지 않은 멤버는 403, 여러 번 틀리면 429."""
+    """본인 확인을 마친 멤버. 4자리가 없거나 틀리면 401, 정하지 않은 멤버는 403."""
     member = _member(member_id)
     row = fetch_one("select pin_hash from members where id = %s", (member_id,))
     if not row["pin_hash"]:
         raise HTTPException(403, "숫자 4자리를 정하지 않은 멤버라 열 수 없어요")
-    count, until = _tries.get(member_id, (0, 0.0))
-    now = time.monotonic()
-    if until > now:
-        raise HTTPException(429, f"여러 번 틀려서 {int(until - now) + 1}초 뒤에 다시 할 수 있어요")
-    if pin and check_pin(pin, row["pin_hash"]):
-        _tries.pop(member_id, None)
-        return member
-    if pin:  # 비어 있는 건 아직 안 넣은 것이라 횟수에 넣지 않는다
-        count += 1
-        _tries[member_id] = (0, now + LOCK_SECONDS) if count >= MAX_TRIES else (count, 0.0)
-    raise HTTPException(401, "숫자 4자리가 맞지 않아요")
+    if not (pin and check_pin(pin, row["pin_hash"])):
+        raise HTTPException(401, "숫자 4자리가 맞지 않아요")
+    return member
 
 
 def _bank_items(member: dict) -> list[dict]:

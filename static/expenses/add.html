@@ -67,8 +67,9 @@
       const res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
       const data = await res.json().catch(() => ({}));
       const detail = typeof data.detail === "string" ? data.detail : "잠시 뒤에 다시 해 주세요";
-      if (res.status === 401 || res.status === 429) {
-        if (res.status === 401) { pin = null; drop(PIN_KEY); }
+      if (res.status === 401) {
+        pin = null;
+        drop(PIN_KEY);
         throw new NeedPin(detail);
       }
       if (!res.ok) throw new Error(detail);

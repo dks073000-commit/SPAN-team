@@ -9,7 +9,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import db
-from app.expenses import router as expenses
 from app.expenses.mockbank import router as mockbank
 from app.main import app
 from app.rooms.pin import hash_pin
@@ -40,7 +39,6 @@ def room(monkeypatch):
             "insert into members (room_code, nickname, budget, fintech_use_num, pin_hash) values (%s, %s, %s, %s, %s) returning id",
             (CODE, nickname, budget, account, hash_pin(pin) if pin else None),
         )["id"]
-    expenses._tries.clear()
     yield ids
     db.execute("delete from rooms where code = %s", (CODE,))
 
@@ -132,16 +130,6 @@ def test_member_id_alone_is_not_enough(room):
 
 def test_member_without_pin_cannot_open(room):
     assert client.get("/api/expenses/me", params={"member_id": room["4자리없음"]}, headers=auth()).status_code == 403
-
-
-def test_five_wrong_pins_lock_for_a_while(room):
-    me_id = room["발표자"]
-    for _ in range(5):
-        assert client.get("/api/expenses/me", params={"member_id": me_id}, headers=auth("0000")).status_code == 401
-    locked = client.get("/api/expenses/me", params={"member_id": me_id}, headers=auth())
-    assert locked.status_code == 429  # 맞는 번호여도 잠긴 동안은 막는다
-    expenses._tries.clear()
-    assert client.get("/api/expenses/me", params={"member_id": me_id}, headers=auth()).status_code == 200
 
 
 def test_gave_up_member_cannot_change(room):
