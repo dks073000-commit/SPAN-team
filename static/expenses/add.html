@@ -2,197 +2,383 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>버티기 · 내 지출</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#e4e4e9">
+  <title>텅장방어전 · 내 기록</title>
   <link rel="stylesheet" href="/static/common.css">
-  <style>
-    .notice { background: #f3f4f6; border-radius: 8px; padding: 8px 12px; font-size: 13px; color: var(--muted); margin: 0 0 16px; }
-    .hero { text-align: center; padding: 16px 0 8px; }
-    .hero .label { color: var(--muted); font-size: 14px; }
-    .hero .remaining { font-size: 36px; font-weight: 800; margin: 4px 0; }
-    .hero .remaining.over { color: var(--danger); }
-    .hero .sub { color: var(--muted); font-size: 14px; }
-    .status { display: inline-block; margin-top: 8px; padding: 2px 10px; border-radius: 999px; font-size: 13px; font-weight: 700; }
-    .status.미확인 { background: #fef3c7; color: #92400e; }
-    .status.조정 { background: #dcfce7; color: #166534; }
-    .status.항복 { background: #e5e7eb; color: #374151; }
-    .wide { width: 100%; margin: 12px 0; }
-    .message { text-align: center; font-size: 14px; min-height: 20px; color: var(--accent); }
-    ul.items { list-style: none; padding: 0; margin: 0; }
-    .item { border-bottom: 1px solid var(--line); padding: 10px 0; }
-    .item.off .main { color: var(--muted); text-decoration: line-through; }
-    .row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-    .main { font-weight: 600; }
-    .date { color: var(--muted); font-size: 13px; margin-right: 6px; font-weight: 400; }
-    .controls { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 14px; }
-    .controls select { width: auto; padding: 4px; font-size: 14px; }
-    .controls .share { margin-left: auto; font-weight: 700; white-space: nowrap; }
-    .toggle { width: auto; white-space: nowrap; padding: 4px 10px; font-size: 13px; border-radius: 6px; border: 1px solid var(--line); background: #fff; color: var(--text); }
-    .toggle.on { background: var(--text); color: #fff; border-color: var(--text); }
-    .badge { display: inline-block; font-size: 12px; padding: 1px 6px; border-radius: 4px; background: #eef2ff; color: #3730a3; margin: 4px 4px 0 0; }
-    .badge.warn { background: #fef3c7; color: #92400e; }
-    .giveup { display: block; margin: 32px 0 0 auto; background: #fff; color: var(--muted); border: 1px solid var(--line); font-size: 14px; }
-  </style>
+  <link rel="stylesheet" href="/static/board/common-proposal.css">
+  <link rel="stylesheet" href="/static/board/flow/flow.css">
 </head>
 <body>
-<main>
-  <p id="loading" class="muted">불러오는 중...</p>
-
-  <section id="no-member" hidden>
-    <h1>먼저 방에 참여해 주세요</h1>
-    <p class="muted">이 브라우저에는 참여 기록이 없어요.</p>
-    <p><a id="room-link" class="button" href="#">방으로 가기</a></p>
-  </section>
-
-  <section id="page" hidden>
-    <p class="notice">시연용 가상 계좌입니다. 실제 은행·계좌와 연결되지 않습니다.</p>
-    <p class="muted" id="who"></p>
-
-    <div class="hero">
-      <div class="label">목표까지 남은 금액</div>
-      <div class="remaining" id="remaining"></div>
-      <div class="sub" id="sub"></div>
-      <span class="status" id="status"></span>
-    </div>
-
-    <button id="import" class="wide">내역 불러오기</button>
-    <p class="message" id="message"></p>
-
-    <ul class="items" id="items"></ul>
-    <p class="muted" id="empty" hidden>아직 불러온 내역이 없어요. [내역 불러오기]를 눌러 주세요.</p>
-
-    <button id="confirm" class="wide">조정 완료</button>
-    <p class="muted" style="font-size:13px">항목마다 몇 명이서 냈는지, 빼야 할 지출인지 확인하고 눌러 주세요. 결과는 마감일 결과 카드에서 공개돼요.</p>
-
-    <button id="giveup" class="giveup">🏳 항복하기</button>
-  </section>
-</main>
+<!-- 내 기록 (지출 레인). 시안: /flow/r/{code}/me (static/board/flow/me.html)
+     화면의 일: 남은 돈을 보고, 다음 할 일 하나(불러오기 → 조정 완료)를 한다. 다른 사람 순위는 없다 (10/3)
+     본인 확인: 참여 때 정한 숫자 4자리를 한 번 묻고 이 브라우저에 기억한다. API 는 X-Member-Pin 헤더로 확인한다 (10/6) -->
+<main id="page" aria-live="polite"><p class="muted">불러오는 중이에요</p></main>
 <script>
-  const code = location.pathname.split("/")[2];
-  const storageKey = `member_id:${code}`;
-  const $ = id => document.getElementById(id);
-  const esc = s => String(s).replace(/[&<>"]/g, c => ({"&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;"}[c]));
-  const won = n => n.toLocaleString("ko-KR") + "원";
-  const md = iso => { const [, m, d] = iso.split("-"); return `${+m}/${+d}`; };
+  (function () {
+    "use strict";
+    const code = decodeURIComponent(location.pathname.split("/")[2] || "");
+    const enc = encodeURIComponent(code);
+    const page = document.getElementById("page");
+    const MEMBER_KEY = `member_id:${code}`;   // 방 레인이 참여 · 다시 들어오기 때 저장한다
+    const PIN_KEY = `pin:${code}`;
+    const MAX_PEOPLE = 20;
 
-  // 개발 · 시연용: ?member_id=1 로 열면 그 멤버로 들어간다 (참여 폼이 생기기 전 확인용)
-  const fromUrl = new URLSearchParams(location.search).get("member_id");
-  if (fromUrl) { try { localStorage.setItem(storageKey, fromUrl); } catch {} }
-  let memberId = fromUrl;
-  if (!memberId) { try { memberId = localStorage.getItem(storageKey); } catch {} }
+    const svg = (d, w = 1.8) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${d}</svg>`;
+    const ICON = {
+      flag: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 21V3.5"/><path d="M5 4h12.5l-2.5 4.25 2.5 4.25H5" fill="#fff"/></svg>',
+      me: svg('<path d="M6 3h12v18l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5L6 21z"/><path d="M9 8h6M9 12h6M9 16h3"/>'),
+      result: svg('<circle cx="12" cy="14" r="6"/><path d="M8.5 3h7l-2 6.2M10.5 9.2L8.5 3"/><path d="M12 11.5v5"/>'),
+      lock: svg('<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/>', 2),
+      eye: svg('<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'),
+      eyeOff: svg('<path d="M3 3l18 18"/><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6C3.8 8.4 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>'),
+    };
 
-  let summary = null;
-  let busy = false;
+    /* ---------- 도우미 (날짜는 toISOString 을 쓰지 않는다: CLAUDE.md 시간대 규칙) ---------- */
+    const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    const won = (n) => Math.abs(Math.round(n)).toLocaleString("ko-KR");
+    const parse = (s) => { const [y, m, d] = s.split("-").map(Number); return new Date(y, m - 1, d); };
+    const pad = (n) => String(n).padStart(2, "0");
+    const ymd = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const daysBetween = (a, b) => Math.round((parse(b) - parse(a)) / 86400000);
+    const WD = ["일", "월", "화", "수", "목", "금", "토"];
+    const md = (s) => { const d = parse(s); return `${d.getMonth() + 1}/${d.getDate()}(${WD[d.getDay()]})`; };
+    const token = (id, nickname, extra) =>
+      `<span class="token p${(((Number(id) - 1) % 6) + 6) % 6 + 1}${extra ? " " + extra : ""}" aria-hidden="true">${esc(Array.from(String(nickname || "?"))[0])}</span>`;
 
-  async function api(method, url, body) {
-    const res = await fetch(url, {
-      method,
-      headers: body ? {"Content-Type": "application/json"} : {},
-      body: body ? JSON.stringify(body) : undefined,
-    });
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) throw new Error(typeof data.detail === "string" ? data.detail : "요청이 실패했어요");
-    return data;
-  }
+    function get(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
+    function put(key, v) { try { localStorage.setItem(key, v); } catch (e) { /* 저장이 막힌 브라우저: 이번 화면에서만 */ } }
+    function drop(key) { try { localStorage.removeItem(key); } catch (e) { /* 무시 */ } }
 
-  function render(s) {
-    summary = s;
-    const gaveUp = s.status === "항복";
-    $("who").textContent = `${s.room_name} · ${s.nickname}` + (s.account ? ` · ${s.account}` : "");
-    $("remaining").textContent = won(s.remaining);
-    $("remaining").classList.toggle("over", s.remaining < 0);
-    $("sub").textContent = `목표 ${won(s.budget)} · 쓴 돈 ${won(s.spent)}`;
-    $("status").textContent = s.status;
-    $("status").className = "status " + s.status.split(" ")[0];
+    const memberId = get(MEMBER_KEY);
+    let pin = get(PIN_KEY);
+    let summary = null;
+    let flash = "";
+    let pinError = "";
+    let editing = false;     // 조정 완료 뒤 '수정하기'를 눌러 다시 고치는 중
+    let focusKey = "";       // 인원 − + 를 누른 뒤 다시 그려도 같은 버튼에 초점을 둔다
+    let busy = false;
 
-    $("empty").hidden = s.items.length > 0;
-    $("items").innerHTML = s.items.map(i => {
-      const peopleOptions = Array.from({length: 10}, (_, k) => k + 1)
-        .map(n => `<option value="${n}" ${n === i.people ? "selected" : ""}>${n}명</option>`).join("");
-      const badges = i.badges.map(b => `<span class="badge ${b.startsWith("자동") ? "" : "warn"}">${esc(b)}</span>`).join("");
-      return `
-        <li class="item ${i.excluded ? "off" : ""}" data-id="${i.id}">
-          <div class="row">
-            <span class="main"><span class="date">${md(i.date)}</span>${esc(i.merchant)}</span>
-            <span>${won(i.amount)}</span>
-          </div>
-          <div class="controls">
-            <select data-act="people" ${i.excluded || gaveUp ? "disabled" : ""}>${peopleOptions}</select>
-            <button class="toggle ${i.excluded ? "on" : ""}" data-act="exclude" ${gaveUp ? "disabled" : ""}>${i.excluded ? "제외됨" : "제외"}</button>
-            <span class="share">내 몫 ${won(i.my_share)}</span>
-          </div>
-          ${badges}
-        </li>`;
-    }).join("");
+    class NeedPin extends Error {}
 
-    for (const id of ["import", "confirm", "giveup"]) $(id).disabled = gaveUp;
-    $("confirm").textContent = s.status === "조정 완료" ? "조정 완료 ✓" : "조정 완료";
-  }
-
-  async function run(task) {
-    if (busy) return;
-    busy = true;
-    try { await task(); }
-    catch (e) { $("message").textContent = e.message; }
-    finally { busy = false; }
-  }
-
-  $("import").addEventListener("click", () => run(async () => {
-    $("message").textContent = "은행에서 불러오는 중...";
-    const res = await api("POST", "/api/expenses/import", {member_id: Number(memberId)});
-    render(res.summary);
-    $("message").textContent = res.message;
-  }));
-
-  $("items").addEventListener("change", e => {
-    if (e.target.dataset.act !== "people") return;
-    const id = e.target.closest(".item").dataset.id;
-    run(async () => render(await api("PATCH", `/api/expenses/${id}`, {member_id: Number(memberId), people: Number(e.target.value)})));
-  });
-
-  $("items").addEventListener("click", e => {
-    if (e.target.dataset.act !== "exclude") return;
-    const id = Number(e.target.closest(".item").dataset.id);
-    const current = summary.items.find(i => i.id === id);
-    run(async () => render(await api("PATCH", `/api/expenses/${id}`, {member_id: Number(memberId), excluded: !current.excluded})));
-  });
-
-  $("confirm").addEventListener("click", () => run(async () => {
-    render(await api("POST", "/api/expenses/confirm", {member_id: Number(memberId)}));
-    $("message").textContent = "조정을 마쳤어요. 새 지출이 들어오면 다시 확인해 주세요.";
-  }));
-
-  // 항복: 방 레인의 API 를 부른다 (BUILD_ORDER: POST /api/rooms/{code}/members/{id}/give-up)
-  $("giveup").addEventListener("click", () => {
-    if (!confirm("항복하면 되돌릴 수 없어요. 결과 카드에는 금액 없이 깃발만 보여요. 정말 항복할까요?")) return;
-    run(async () => {
-      try {
-        await api("POST", `/api/rooms/${encodeURIComponent(code)}/members/${encodeURIComponent(memberId)}/give-up`);
-      } catch (e) {
-        throw new Error("항복 기능이 아직 준비되지 않았어요 (" + e.message + ")");
+    async function api(method, url, body) {
+      const headers = { "X-Member-Pin": pin || "" };
+      if (body) headers["Content-Type"] = "application/json";
+      const res = await fetch(url, { method, headers, body: body ? JSON.stringify(body) : undefined });
+      const data = await res.json().catch(() => ({}));
+      const detail = typeof data.detail === "string" ? data.detail : "잠시 뒤에 다시 해 주세요";
+      if (res.status === 401 || res.status === 429) {
+        if (res.status === 401) { pin = null; drop(PIN_KEY); }
+        throw new NeedPin(detail);
       }
-      render(await api("GET", `/api/expenses/me?member_id=${encodeURIComponent(memberId)}`));
-      $("message").textContent = "항복했어요. 다음엔 버텨 봐요!";
-    });
-  });
+      if (!res.ok) throw new Error(detail);
+      return data;
+    }
 
-  async function start() {
-    if (!memberId) {
-      $("loading").hidden = true;
-      $("room-link").href = `/r/${encodeURIComponent(code)}`;
-      $("no-member").hidden = false;
-      return;
+    function roomInfo(s) {
+      const t = ymd(new Date());
+      return { result_open: t >= s.end_date, days_left: Math.max(daysBetween(t, s.end_date), 0) };
     }
-    try {
-      render(await api("GET", `/api/expenses/me?member_id=${encodeURIComponent(memberId)}`));
-    } catch (e) {
-      $("loading").textContent = e.message;
-      return;
+
+    /* ---------- 화면: 참여 전 · 4자리 · 내 기록 ---------- */
+
+    function renderNoMember() {
+      page.innerHTML = `
+        <p class="brand">텅장방어전</p>
+        <h1>먼저 방에 참여해 주세요</h1>
+        <a class="button wide" href="/r/${enc}">참여하러 가기</a>`;
     }
-    $("loading").hidden = true;
-    $("page").hidden = false;
-  }
-  start();
+
+    async function renderPin() {
+      page.className = "flow-step";
+      let who = "";
+      try {   // 방 정보는 공개 API (닉네임만 쓴다)
+        const room = await fetch(`/api/rooms/${enc}`).then((r) => r.json());
+        const m = (room.members || []).find((x) => String(x.id) === String(memberId));
+        if (m) who = `<p class="pin-who">${token(m.id, m.nickname)}<b>${esc(m.nickname)}</b></p>`;
+      } catch (e) { /* 이름 없이 그린다 */ }
+      page.innerHTML = `
+        <p class="brand">텅장방어전</p>
+        <div class="step-body">
+          ${who}
+          <h1 class="consent-title">숫자 4자리를 넣어 주세요</h1>
+          <p class="muted consent-sub">참여할 때 정한 번호예요</p>
+          <form id="pin-form" class="pin-form" novalidate>
+            <div class="pin-field pin-field-big">
+              <input id="pin" class="pin-input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" aria-label="숫자 4자리">
+              <button type="button" class="eye-btn" aria-label="숫자 보이기" aria-pressed="false">${ICON.eye}</button>
+            </div>
+            <p class="danger" role="alert">${esc(pinError)}</p>
+            <div class="step-actions"><button type="submit" class="wide">들어가기</button></div>
+          </form>
+        </div>`;
+      const input = document.getElementById("pin");
+      input.focus();
+      page.querySelector(".eye-btn").addEventListener("click", (ev) => {
+        const btn = ev.currentTarget;
+        const show = input.type === "password";
+        input.type = show ? "text" : "password";
+        btn.setAttribute("aria-pressed", String(show));
+        btn.setAttribute("aria-label", show ? "숫자 숨기기" : "숫자 보이기");
+        btn.innerHTML = show ? ICON.eyeOff : ICON.eye;
+      });
+      document.getElementById("pin-form").addEventListener("submit", (ev) => {
+        ev.preventDefault();
+        const value = input.value.trim();
+        if (!/^\d{4}$/.test(value)) { pinError = "숫자 4자리를 넣어 주세요."; renderPin(); return; }
+        pin = value;
+        put(PIN_KEY, value);
+        pinError = "";
+        load();
+      });
+    }
+
+    function render() {
+      const s = summary;
+      page.className = "";
+      const info = roomInfo(s);
+      const gaveUp = s.status === "항복";
+      const items = s.items.slice().sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
+      const hasItems = items.length > 0;
+      const unconfirmed = s.status === "미확인";
+      const dday = info.result_open ? "결과 공개" : `D-${info.days_left}`;
+
+      // 가장 큰 글자: 목표까지 남은 돈 (항복하면 항복)
+      let hero;
+      if (gaveUp) {
+        hero = '<h1 class="money">항복했어요</h1><p class="sub">결과 카드에는 깃발만 남아요</p>';
+      } else {
+        // 조정 완료는 아래 거래 판에 큰 도장으로 찍는다 (여기서는 확정 전 상태만)
+        const state1 = !hasItems ? '<span class="tag">불러오기 전</span>' : unconfirmed ? '<span class="tag">미확인</span>' : "";
+        const goal = s.remaining >= 0
+          ? `<p class="kicker">목표까지</p><h1 class="money"><mark><span class="n">${won(s.remaining)}</span>원</mark> 남았어요</h1>`
+          : `<p class="kicker">예산을</p><h1 class="money"><span class="n">${won(s.remaining)}</span>원 넘겼어요</h1>`;
+        hero = `
+          <div class="hero-top">
+            <div class="hero-goal">${goal}</div>
+            <button type="button" id="quit" class="quit-btn" aria-haspopup="dialog">${ICON.flag}<span>항복</span></button>
+          </div>
+          <p class="sub"><span><span class="n">${won(s.budget)}</span>원 중 <span class="n">${won(s.spent)}</span>원 썼어요</span>${state1}</p>`;
+        // 남은 예산 막대: 여유 → 주의 → 위험 → 초과
+        const left = Math.max(0, Math.round((s.remaining / s.budget) * 100));
+        const level = s.remaining < 0 ? "over" : left >= 50 ? "ok" : left >= 20 ? "warn" : "danger";
+        let pace = "";
+        if (!info.result_open && s.remaining >= 0) {
+          const days = info.days_left + 1;
+          pace = `<p class="pace">남은 <span class="n">${days}</span>일 · 하루 <span class="n">${won(Math.floor(s.remaining / days / 100) * 100)}</span>원까지 OK</p>`;
+        } else if (s.remaining < 0) {
+          pace = '<p class="pace">여기서 멈추면 더 내려가지 않아요</p>';
+        }
+        hero += `
+          <div class="gauge-row"><span>남은 예산</span><b>${s.remaining < 0 ? "0" : left}%</b></div>
+          <div class="gauge" data-level="${level}" style="--left:${left}%"><span></span></div>
+          ${pace}`;
+      }
+
+      // 조정 완료 뒤에는 잠근다. 다시 고치려면 '수정하기'
+      const locked = hasItems && !unconfirmed && !editing;
+      const peopleText = (n) => (n === 1 ? "혼자" : `<span class="n">${n}</span>명`);
+
+      const rows = items.map((e) => {
+        const sub = [`<span class="when">${md(e.date)}</span>`];
+        if (e.people > 1 && !e.excluded) sub.push(`<span class="when">내 몫 <span class="n">${won(e.my_share)}</span>원</span>`);
+        const hints = e.badges.filter((b) => !b.startsWith("자동 제외"));
+
+        let ctl;
+        if (e.auto) ctl = '<span class="stamp stamp-gray">가승인 취소</span>';
+        else if (gaveUp) ctl = "";
+        else if (locked) {
+          ctl = e.excluded ? '<span class="out-mark">제외</span>'
+            : `<span class="ctl-val">${e.people === 1 ? "혼자" : `<span class="n">${e.people}</span>명이서`}</span>`;
+        } else {
+          const name = esc(e.merchant);
+          ctl = `
+            <span class="count" role="group" aria-label="${name} 같이 낸 사람">
+              <button type="button" data-id="${e.id}" data-step="-1" aria-label="한 명 빼기"${e.people <= 1 || e.excluded ? " disabled" : ""}>−</button>
+              <span class="count-n" aria-live="polite">${peopleText(e.people)}</span>
+              <button type="button" data-id="${e.id}" data-step="1" aria-label="한 명 더하기"${e.people >= MAX_PEOPLE || e.excluded ? " disabled" : ""}>+</button>
+            </span>
+            <label class="toggle"><input type="checkbox" data-id="${e.id}" data-field="excluded"${e.excluded ? " checked" : ""} aria-label="${name} 제외"><span>제외</span></label>`;
+        }
+        return `
+          <li class="tx${e.excluded ? " is-out" : ""}">
+            <span class="what">${esc(e.merchant)}</span>
+            <span class="amt"><span class="n">${won(e.amount)}</span>원</span>
+            <span class="tx-sub">${sub.join("")}</span>
+            <span class="ctl">${ctl}</span>
+            ${hints.length ? `<span class="tx-hint">${hints.map((h) => `<span class="tag">${esc(h)}</span>`).join(" ")}</span>` : ""}
+          </li>`;
+      }).join("");
+
+      const needConfirm = hasItems && (unconfirmed || editing) && !gaveUp;
+      let action = "";
+      if (!gaveUp && !hasItems) action = `<button type="button" id="load" class="wide">${esc(s.account || "내 계좌")}에서 불러오기</button>`;
+      else if (needConfirm) action = '<div class="sticky"><button type="button" id="confirm" class="wide">조정 완료</button></div>';
+      else if (locked && !gaveUp) action = '<button type="button" id="edit" class="secondary wide edit-btn">수정하기</button>';
+
+      page.innerHTML = `
+        <p class="brand">텅장방어전</p>
+        <p class="meta me-meta">${token(s.member_id, s.nickname, gaveUp ? "is-quit" : "is-me")}<span>${esc(s.nickname)} · ${esc(s.room_name)} · <b>${dday}</b></span></p>
+        ${hero}
+        ${flash ? `<p class="flash" role="status">${esc(flash)}</p>` : ""}
+        ${!hasItems ? `<hr>${action}` : ""}
+        ${hasItems ? `
+          <section class="panel${locked && !gaveUp ? " is-locked" : ""}" aria-label="불러온 거래">
+            ${locked && !gaveUp ? '<span class="stamp stamp-blue done-stamp">조정 완료</span>' : ""}
+            <p class="list-head"><span>불러온 거래 <span class="n">${items.length}</span>건</span>${gaveUp || locked ? "" : '<button type="button" id="load" class="text-btn">새로 불러오기</button>'}</p>
+            <p class="privacy-note">이 목록은 나만 봐요 · 친구에게는 총액만 보여요</p>
+            <ul class="list">${rows}</ul>
+            ${action}
+          </section>` : ""}`;
+      document.title = `내 기록 · ${s.room_name}`;
+      flash = "";
+      bind();
+      tabbar(info);
+    }
+
+    /* ---------- 동작 ---------- */
+
+    async function run(task) {
+      if (busy) return;
+      busy = true;
+      try { await task(); }
+      catch (e) {
+        if (e instanceof NeedPin) { pinError = e.message; renderPin(); return; }
+        flash = e.message;
+        if (summary) render();
+        else page.innerHTML = `<p class="brand">텅장방어전</p><p class="danger">${esc(e.message)}</p>`;
+      } finally { busy = false; }
+    }
+
+    function load() {
+      return run(async () => {
+        summary = await api("GET", `/api/expenses/me?member_id=${encodeURIComponent(memberId)}`);
+        render();
+      });
+    }
+
+    function bind() {
+      const body = { member_id: Number(memberId) };
+      const loadBtn = document.getElementById("load");
+      if (loadBtn) loadBtn.addEventListener("click", () => run(async () => {
+        const res = await api("POST", "/api/expenses/import", body);
+        summary = res.summary;
+        flash = res.added ? "" : "새 거래가 없어요";
+        render();
+      }));
+      const confirmBtn = document.getElementById("confirm");
+      if (confirmBtn) confirmBtn.addEventListener("click", () => run(async () => {
+        summary = await api("POST", "/api/expenses/confirm", body);
+        editing = false;
+        flash = "조정 완료. 결과 카드에 이대로 들어가요";
+        render();
+        window.scrollTo(0, 0);
+      }));
+      const edit = document.getElementById("edit");
+      if (edit) edit.addEventListener("click", () => {
+        editing = true;
+        render();
+        const first = page.querySelector(".tx .count button:not(:disabled), .tx .toggle input");
+        if (first) first.focus();
+      });
+      const quit = document.getElementById("quit");
+      if (quit) quit.addEventListener("click", openQuit);
+
+      const patch = (id, change, key) => run(async () => {
+        summary = await api("PATCH", `/api/expenses/${id}`, { ...body, ...change });
+        focusKey = key;
+        render();
+      });
+      page.querySelectorAll("[data-field]").forEach((el) => el.addEventListener("change", () => {
+        const id = el.getAttribute("data-id");
+        patch(id, { excluded: el.checked }, `${id}:x`);
+      }));
+      page.querySelectorAll("[data-step]").forEach((el) => el.addEventListener("click", () => {
+        const id = el.getAttribute("data-id");
+        const item = summary.items.find((e) => String(e.id) === id);
+        const next = Math.min(MAX_PEOPLE, Math.max(1, item.people + Number(el.getAttribute("data-step"))));
+        if (next !== item.people) patch(id, { people: next }, `${id}:${el.getAttribute("data-step")}`);
+      }));
+      if (focusKey) {
+        const [id, what] = focusKey.split(":");
+        const sel = what === "x" ? `[data-id="${id}"][data-field]` : `[data-id="${id}"][data-step="${what}"]`;
+        const el = page.querySelector(sel);
+        // 끝까지 가서 버튼이 꺼지면 반대쪽 버튼으로
+        const target = el && el.disabled ? page.querySelector(`[data-id="${id}"][data-step="${-Number(what)}"]`) : el;
+        if (target) target.focus({ preventScroll: true });
+        focusKey = "";
+      }
+    }
+
+    /* ---------- 항복 확인: 아래에서 올라오는 판. 기본 버튼은 '계속 버티기' ---------- */
+    const sheet = document.createElement("div");
+    sheet.className = "quit-sheet";
+    sheet.hidden = true;
+    sheet.innerHTML = `
+      <div class="qs-backdrop" data-close></div>
+      <section class="qs-panel" role="dialog" aria-modal="true" aria-labelledby="qs-title" aria-describedby="qs-desc">
+        <span class="qs-flag">${ICON.flag}</span>
+        <h2 id="qs-title">정말 항복할까요?</h2>
+        <p id="qs-desc" class="muted">되돌릴 수 없어요. 결과 카드에는 깃발만 남아요.</p>
+        <div class="stack">
+          <button type="button" class="wide" data-close>계속 버티기</button>
+          <button type="button" id="giveup" class="danger-line wide">항복하기</button>
+        </div>
+      </section>`;
+    document.body.append(sheet);
+    function openQuit() {
+      sheet.hidden = false;
+      document.body.style.overflow = "hidden";
+      sheet.querySelector(".qs-panel [data-close]").focus();
+    }
+    function closeQuit() {
+      sheet.hidden = true;
+      document.body.style.overflow = "";
+      const q = document.getElementById("quit");
+      if (q) q.focus();
+    }
+    sheet.addEventListener("click", (ev) => {
+      if (ev.target.closest("[data-close]")) closeQuit();
+      if (ev.target.closest("#giveup")) {
+        sheet.hidden = true;
+        document.body.style.overflow = "";
+        // 항복은 방 레인 API (POST /api/rooms/{code}/members/{id}/give-up)
+        run(async () => {
+          await api("POST", `/api/rooms/${enc}/members/${encodeURIComponent(memberId)}/give-up`);
+          summary = await api("GET", `/api/expenses/me?member_id=${encodeURIComponent(memberId)}`);
+          render();
+          window.scrollTo(0, 0);
+        });
+      }
+    });
+    document.addEventListener("keydown", (ev) => { if (ev.key === "Escape" && !sheet.hidden) closeQuit(); });
+
+    /* ---------- 아래 고정 탭 [내 기록 | 결과] · 바닥글 ---------- */
+    let nav = null;
+    function tabbar(info) {
+      if (!nav) {
+        nav = document.createElement("nav");
+        nav.className = "tabbar";
+        nav.setAttribute("aria-label", "이 방에서 이동");
+        document.body.append(nav);
+        document.body.classList.add("has-tabbar");
+      }
+      nav.innerHTML = `
+        <a href="/r/${enc}/add" aria-current="page">${ICON.me}<span>내 기록</span></a>
+        <a href="/r/${enc}/board">${ICON.result}<span>결과${info.result_open ? "" : ` <em>${ICON.lock}D-${info.days_left}</em>`}</span></a>`;
+    }
+
+    // 바닥글: 모든 화면 맨 아래 개인정보 처리방침 링크 (보드 레인 store.js footer 와 같은 모양)
+    const foot = document.createElement("footer");
+    foot.className = "site-foot";
+    foot.innerHTML = '<a class="sf-privacy" href="/flow/privacy">개인정보 처리방침</a>'
+      + '<span class="sf-sep" aria-hidden="true">·</span><span>텅장방어전 · SPAN 팀</span>';
+    page.after(foot);
+
+    if (!memberId) renderNoMember();
+    else if (!pin) renderPin();
+    else load();
+  })();
 </script>
 </body>
 </html>
