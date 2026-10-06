@@ -217,7 +217,11 @@ def authorize_page(redirect_uri: str = "", state: str = ""):
     """가짜 은행 인증 화면. 참여 폼의 [은행 연결하기] 버튼이 이 주소로 보낸다."""
     if not _safe_redirect(redirect_uri):
         return HTMLResponse("redirect_uri 는 같은 사이트 안의 주소(/로 시작)여야 합니다.", status_code=400)
-    page = AUTH_PAGE.read_text(encoding="utf-8").replace("<!--ACCOUNTS-->", _account_choices())
+    page = (
+        AUTH_PAGE.read_text(encoding="utf-8")
+        .replace("<!--ACCOUNTS-->", _account_choices())
+        .replace("<!--ACCOUNT_COUNT-->", str(len(data.ACCOUNTS)))
+    )
     return HTMLResponse(page)
 
 

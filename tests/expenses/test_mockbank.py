@@ -201,6 +201,7 @@ def test_connect_page_shows_only_my_accounts():
     page = res.text
     assert "계좌 연결" in page and "텅장방어전" in page and "버티기" not in page and "시연용 가상 계좌" in page
     assert "[필수]" not in page and 'id="agree"' not in page
+    assert '연결된 계좌 <span class="n">2</span>개' in page
     assert "생활비 통장" in page and "123-****-1234" in page  # 입출금 (시연 거래)
     assert "자유적금" in page and "123-****-5678" in page  # 적금
     assert "안정훈" not in page and "500000" not in page  # 주인 이름 · 잔액은 안 보여 줌
