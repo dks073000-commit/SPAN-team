@@ -200,14 +200,14 @@ def _safe_redirect(redirect_uri: str) -> bool:
 
 
 def _account_choices() -> str:
-    """② 내 계좌 선택 칸. 은행 이름 + 상품 이름 + 가린 계좌번호만 보여 준다 (잔액 · 주인 이름은 안 보여 줌)."""
+    """계좌 선택 칸 (UI 가이드의 label.pick). 은행 이름 + 상품 이름 + 가린 계좌번호만 보여 준다 (잔액 · 주인 이름은 안 보여 줌)."""
     rows = []
     for i, (num, account) in enumerate(data.ACCOUNTS.items()):
         rows.append(
             f'<label class="pick"><input type="radio" name="fintech_use_num" value="{escape(num)}"'
             f'{" checked" if i == 0 else ""}>'
-            f'<span><b>{escape(account["product_name"])}</b>'
-            f'<small>{escape(data.BANK_NAME)} {escape(account["masked"])}</small></span></label>'
+            f'<span>{escape(data.BANK_NAME)} {escape(account["product_name"])}'
+            f'<span class="pick-sub">{escape(account["masked"])}</span></span></label>'
         )
     return "\n".join(rows)
 

@@ -2,84 +2,40 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#e4e4e9">
   <title>가상은행 · 계좌 연결</title>
   <link rel="stylesheet" href="/static/common.css">
-  <style>
-    .bank { font-weight: 700; color: var(--accent); margin: 0 0 4px; }
-    .note { background: #f3f4f6; border-radius: 8px; padding: 12px; font-size: 14px; color: var(--muted); }
-    .steps { display: flex; gap: 6px; list-style: none; padding: 0; margin: 0 0 16px; font-size: 13px; color: var(--muted); }
-    .steps li { flex: 1; text-align: center; padding: 6px 0; border-bottom: 3px solid var(--line); }
-    .steps li.now { color: var(--text); font-weight: 700; border-color: var(--accent); }
-    .steps li.done { border-color: var(--accent); }
-    ul.scope { padding-left: 20px; }
-    .agree-line { display: flex; gap: 8px; align-items: center; margin: 16px 0 0; }
-    .pick { display: flex; gap: 10px; align-items: center; border: 1px solid var(--line); border-radius: 8px; padding: 12px; margin: 8px 0; }
-    .pick:has(input:checked) { border-color: var(--accent); background: #eff6ff; }
-    .pick input, .agree-line input { width: auto; flex: none; margin: 0; }
-    .pick span { display: flex; flex-direction: column; flex: 1; }
-    .pick small { color: var(--muted); }
-    .actions { display: flex; gap: 8px; margin-top: 24px; }
-    .actions button { flex: 1; padding: 12px; font-size: 16px; border-radius: 8px; border: 1px solid var(--line); background: #fff; color: var(--text); }
-    .actions .primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 700; }
-    .actions .primary:disabled { opacity: .4; }
-  </style>
+  <link rel="stylesheet" href="/static/board/flow/flow.css">
 </head>
 <body>
-<main>
-  <p class="bank">가상은행</p>
-  <h1>계좌 연결</h1>
-  <p class="note">시연용 가상 계좌입니다. 실제 은행·계좌와 연결되지 않습니다.<br>
-    실제 서비스에서는 이 자리에 은행 본인 인증 화면이 뜹니다.</p>
-
-  <ol class="steps"><li id="step-1" class="now">① 동의</li><li id="step-2">② 계좌 선택</li></ol>
-
-  <form method="post" action="/api/expenses/mockbank/oauth/2.0/authorize">
+<!-- 참여 ③ 계좌 선택 (가짜 은행 화면). 동의는 방 화면(② 은행 연결)에서 이미 받았으니 여기서는 계좌만 고른다 (10/6)
+     고른 계좌의 fintech_use_num 을 redirect_uri 로 돌려준다. 시안: /flow/r/{code} 의 계좌 선택 -->
+<main class="flow-step">
+  <p class="brand">텅장방어전</p>
+  <ol class="stepper"><li class="is-done">정보 입력</li><li class="is-done">은행 연결</li><li class="is-now" aria-current="step">계좌 선택</li></ol>
+  <form method="post" action="/api/expenses/mockbank/oauth/2.0/authorize" class="step-body">
     <input type="hidden" name="redirect_uri" id="redirect_uri">
     <input type="hidden" name="state" id="state">
-
-    <!-- ① 동의 -->
-    <section id="consent">
-      <p><strong>텅장방어전</strong> 앱이 아래 정보를 조회하도록 허락할까요?</p>
-      <ul class="scope">
-        <li>고른 계좌의 출금·입금 거래내역</li>
-        <li>텅장방어전은 송금·결제를 할 수 없어요 (조회만)</li>
-        <li>잔액과 계좌 주인 이름은 앱에 저장되지 않아요</li>
-      </ul>
-      <label class="agree-line"><input type="checkbox" id="agree"> [필수] 거래내역 조회에 동의합니다</label>
-      <div class="actions">
-        <button type="button" class="cancel">취소</button>
-        <button type="button" class="primary" id="next" disabled>다음</button>
-      </div>
-    </section>
-
-    <!-- ② 내 계좌 선택 -->
-    <section id="choose" hidden>
-      <p>이 방에서 쓸 계좌를 골라 주세요. 고른 계좌의 출금 내역만 불러와요.</p>
-      <!--ACCOUNTS-->
-      <div class="actions">
-        <button type="button" class="cancel">취소</button>
-        <button type="submit" class="primary">이 계좌 연결</button>
-      </div>
-    </section>
+    <button type="button" class="cancel text-btn back">이전으로</button>
+    <h1>이 방에서 쓸 계좌를<br>골라 주세요</h1>
+    <p class="muted">고른 계좌의 출금 내역만 불러와요</p>
+    <p class="note">시연용 가상 계좌예요. 실제 은행과 연결되지 않아요.</p>
+    <div class="accounts">
+<!--ACCOUNTS-->
+    </div>
+    <div class="step-actions">
+      <button type="submit" class="wide">이 계좌 연결하기</button>
+    </div>
   </form>
 </main>
 <script>
   const params = new URLSearchParams(location.search);
   const back = params.get("redirect_uri") || "/";
-  const $ = id => document.getElementById(id);
-  $("redirect_uri").value = back;
-  $("state").value = params.get("state") || "";
+  document.getElementById("redirect_uri").value = back;
+  document.getElementById("state").value = params.get("state") || "";
 
-  $("agree").addEventListener("change", e => { $("next").disabled = !e.target.checked; });
-  $("next").addEventListener("click", () => {
-    $("consent").hidden = true;
-    $("choose").hidden = false;
-    $("step-1").className = "done";
-    $("step-2").className = "now";
-  });
-
-  // 취소: 아무것도 연결하지 않고 들어오기 전 화면으로 그냥 돌아간다
+  // 이전으로: 아무것도 연결하지 않고 들어오기 전 화면으로 그냥 돌아간다
   for (const button of document.querySelectorAll(".cancel")) {
     button.addEventListener("click", () => {
       if (history.length > 1) history.back();
