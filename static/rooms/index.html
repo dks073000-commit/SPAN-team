@@ -2,75 +2,95 @@
 <html lang="ko">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>버티기 · 방 만들기</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#e4e4e9">
+  <title>텅장방어전 · 방 만들기</title>
   <link rel="stylesheet" href="/static/common.css">
+  <link rel="stylesheet" href="/static/board/common-proposal.css">
+  <link rel="stylesheet" href="/static/board/flow/flow.css">
   <link rel="stylesheet" href="/static/rooms/rooms.css">
 </head>
 <body>
+<!-- 방 만들기. 화면 모양은 /flow (static/board/flow/index.html) 를 따른다. 화면의 일: 링크 만들기 하나 -->
 <main>
-  <h1>버티기</h1>
-  <p class="muted">친구들과 예산을 걸고, 남은 돈을 같이 봅니다.</p>
+  <p class="brand">텅장방어전</p>
+  <h1 class="hook">이번 주 예산,<br>누가 끝까지 버틸까?</h1>
+  <div class="versus" aria-hidden="true">
+    <span class="token p1 is-me">나</span><span class="vs">VS</span>
+    <span class="token is-empty">?</span><span class="token is-empty">?</span><span class="token is-empty">?</span>
+  </div>
+  <hr>
 
-  <form id="create" class="form">
+  <form id="create" class="form" novalidate>
     <label>방 이름
-      <input name="name" maxlength="40" placeholder="예: 10월 둘째 주 버티기" required>
+      <input name="name" maxlength="40" placeholder="예: 10월 둘째 주 방어전" autocomplete="off" required>
     </label>
-    <div class="row">
-      <label>시작일 <input name="start_date" type="date" required></label>
-      <label>종료일 <input name="end_date" type="date" required></label>
+    <div class="two">
+      <label>시작 <input name="start_date" type="date" required></label>
+      <label>마감 <input name="end_date" type="date" required></label>
     </div>
-    <div class="row">
-      <label>업로드 주기
-        <select name="upload_cycle">
-          <option value="1">매일</option>
-          <option value="7" selected>주 1회</option>
-          <option value="14">2주 1회</option>
-        </select>
-      </label>
-      <label>마감 요일
-        <select name="deadline_weekday">
-          <option value="0">월</option><option value="1">화</option><option value="2">수</option>
-          <option value="3">목</option><option value="4">금</option><option value="5">토</option>
-          <option value="6" selected>일</option>
-        </select>
-      </label>
-    </div>
-    <p id="error" class="danger"></p>
-    <button type="submit">방 만들기</button>
+    <p id="error" class="danger" role="alert"></p>
+    <button type="submit">링크 만들기</button>
   </form>
 
   <section id="done" hidden>
-    <h2>방이 만들어졌어요</h2>
-    <p class="muted">이 링크를 친구들에게 보내세요.</p>
-    <div class="link-box">
-      <input id="link" readonly>
-      <button id="copy" type="button">복사</button>
+    <p class="flash">링크가 생겼어요. 단톡방에 보내 주세요</p>
+    <div class="share">
+      <input id="link" readonly aria-label="초대 링크">
+      <button id="copy" type="button" class="small secondary">링크 복사</button>
     </div>
-    <p><a id="go" class="button" href="#">방으로 가기</a></p>
+    <a id="go" class="button wide go" href="#">방으로 가기</a>
   </section>
 </main>
+<!-- 바닥글: 모든 화면 맨 아래 개인정보 처리방침 (개인정보보호법 30조 · 시행령 31조 2항) -->
+<footer class="site-foot"><a class="sf-privacy" href="/privacy">개인정보 처리방침</a><span class="sf-sep" aria-hidden="true">·</span><span>텅장방어전 · SPAN 팀</span></footer>
 <script>
   const form = document.getElementById("create");
-  const iso = d => new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
-  const today = new Date();
-  form.start_date.value = iso(today);
-  form.end_date.value = iso(new Date(today.getTime() + 6 * 86400000));
+  // 기간 기본값: 시작 = 오늘(한국 시간), 마감 = 시작 + 6일 (일주일). 둘 다 고칠 수 있다.
+  // toISOString 은 UTC 라 오전 9시 전에 하루 전 날짜가 되므로 쓰지 않고, 이 기기의 날짜로 만든다 (CLAUDE.md 시간대 규칙)
+  const pad = n => String(n).padStart(2, "0");
+  const ymd = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const addDays = (s, n) => { const [y, m, d] = s.split("-").map(Number); return ymd(new Date(y, m - 1, d + n)); };
+  const dates = form.elements;
+  dates.start_date.value = ymd(new Date());
+  dates.end_date.value = addDays(dates.start_date.value, 6);
+  dates.end_date.min = dates.start_date.value;
+  // 시작일을 바꾸면 마감이 시작보다 앞서지 않게: 비었거나 앞서면 시작 + 6일로
+  dates.start_date.addEventListener("change", () => {
+    const start = dates.start_date.value;
+    if (!start) return;
+    dates.end_date.min = start;
+    if (!dates.end_date.value || dates.end_date.value < start) dates.end_date.value = addDays(start, 6);
+  });
 
   form.addEventListener("submit", async e => {
     e.preventDefault();
     const error = document.getElementById("error");
     error.textContent = "";
-    if (form.end_date.value < form.start_date.value) {
-      error.textContent = "종료일이 시작일보다 빠릅니다.";
+    // form.name 은 폼 자신의 name 속성이라 입력칸은 elements 로 꺼낸다
+    const f = form.elements;
+    f.name.removeAttribute("aria-invalid");
+    f.end_date.removeAttribute("aria-invalid");
+    if (!f.name.value.trim()) {
+      error.textContent = "방 이름을 넣어 주세요.";
+      f.name.setAttribute("aria-invalid", "true");
+      f.name.focus();
       return;
     }
+    if (!f.start_date.value || !f.end_date.value) {
+      error.textContent = "시작일과 마감일을 골라 주세요.";
+      return;
+    }
+    if (f.end_date.value < f.start_date.value) {
+      error.textContent = "마감일이 시작일보다 빨라요.";
+      f.end_date.setAttribute("aria-invalid", "true");
+      return;
+    }
+    // 업로드 주기 · 마감 요일 칸은 화면에서 뺐다 (미제출이 없어져서, 10/3). 서버 기본값(주 1회 · 일요일)이 들어간다
     const body = {
-      name: form.name.value,
-      start_date: form.start_date.value,
-      end_date: form.end_date.value,
-      upload_cycle: Number(form.upload_cycle.value),
-      deadline_weekday: Number(form.deadline_weekday.value),
+      name: f.name.value,
+      start_date: f.start_date.value,
+      end_date: f.end_date.value,
     };
     const button = form.querySelector("button");
     button.disabled = true;
@@ -87,7 +107,7 @@
       form.hidden = true;
       document.getElementById("done").hidden = false;
     } catch {
-      error.textContent = "방을 만들지 못했습니다. 입력을 확인하고 다시 시도해 주세요.";
+      error.textContent = "방을 만들지 못했어요. 잠시 뒤 다시 눌러 주세요.";
     } finally {
       button.disabled = false;
     }
@@ -101,8 +121,8 @@
       link.select();
       document.execCommand("copy");
     }
-    e.target.textContent = "복사됨";
-    setTimeout(() => { e.target.textContent = "복사"; }, 1500);
+    e.target.textContent = "복사했어요";
+    setTimeout(() => { e.target.textContent = "링크 복사"; }, 1600);
   });
 </script>
 </body>
