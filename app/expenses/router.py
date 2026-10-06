@@ -86,12 +86,17 @@ def _import(member: dict) -> int:
         for item in items:
             added += conn.execute(
                 """
-                insert into expenses (member_id, spent_on, merchant, amount, people, excluded, source, ref)
-                values (%s, %s, %s, %s, 1, %s, 'virtual', %s)
+                insert into expenses (member_id, spent_on, spent_time, merchant, amount, people, excluded, source, ref)
+                values (%s, %s, %s, %s, %s, 1, %s, 'virtual', %s)
                 on conflict (member_id, ref) do nothing
                 """,
-                (member["id"], item["spent_on"], item["merchant"], item["amount"], item["excluded"], item["ref"]),
+                (member["id"], item["spent_on"], item["spent_time"], item["merchant"], item["amount"], item["excluded"], item["ref"]),
             ).rowcount
+            # 결제 시간 칸이 생기기 전에 불러온 행은 시간만 채운다 (금액 · 1/N · 제외는 그대로, 건수에도 안 센다)
+            conn.execute(
+                "update expenses set spent_time = %s where member_id = %s and ref = %s and spent_time is null",
+                (item["spent_time"], member["id"], item["ref"]),
+            )
     return added
 
 
@@ -113,9 +118,9 @@ def _summary(member: dict) -> dict:
     """본인 페이지가 그리는 데 쓰는 전부."""
     rows = fetch_all(
         """
-        select id, spent_on, merchant, amount, people, excluded, source, ref, created_at
+        select id, spent_on, spent_time, merchant, amount, people, excluded, source, ref, created_at
         from expenses where member_id = %s
-        order by spent_on desc, id desc
+        order by spent_on desc, spent_time desc nulls last, id desc
         """,
         (member["id"],),
     )
@@ -135,6 +140,7 @@ def _summary(member: dict) -> dict:
         items.append({
             "id": r["id"],
             "date": r["spent_on"].isoformat(),
+            "time": r["spent_time"].strftime("%H:%M") if r["spent_time"] else None,  # 직접 입력 · 예전 행은 없음
             "merchant": r["merchant"],
             "amount": r["amount"],
             "people": r["people"],

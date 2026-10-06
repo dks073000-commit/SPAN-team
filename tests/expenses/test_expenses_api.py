@@ -75,6 +75,11 @@ def test_presenter_demo_flow(room, monkeypatch):
     assert first["added"] == 9 and first["summary"]["status"] == "미확인"
     assert load(me_id)["added"] == 0  # 다시 눌러도 두 번 저장되지 않음
 
+    # 결제 시간: 시간 칸이 비어 있던 예전 행도 다시 불러오면 채워진다
+    db.execute("update expenses set spent_time = null where member_id = %s", (me_id,))
+    assert load(me_id)["added"] == 0
+    assert all(len(i["time"]) == 5 and i["time"][2] == ":" for i in me(me_id)["items"])
+
     s = me(me_id)
     taxis = {i["amount"]: i for i in s["items"] if i["merchant"] == "택시"}
     assert taxis[20000]["badges"] == ["자동 제외 · 가승인"] and taxis[20000]["excluded"] and taxis[20000]["auto"]

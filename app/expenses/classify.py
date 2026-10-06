@@ -85,6 +85,7 @@ def classify(
         items.append({
             "ref": make_ref(fintech_use_num, row),
             "spent_on": when.date(),
+            "spent_time": when.time(),
             "merchant": content,
             "amount": amount,
             "excluded": excluded,
