@@ -82,7 +82,7 @@ API는 레인 이름으로 시작한다: `/api/rooms/...` `/api/expenses/...` `/
 |---|---|---|
 | `rooms` | code, name, start_date, end_date, upload_cycle, deadline_weekday | 방 |
 | `members` | id, room_code, nickname, budget, fintech_use_num, confirmed_at, gave_up_at, pin_hash | 방 (`confirmed_at`은 지출 레인이 쓴다) |
-| `expenses` | id, member_id, spent_on, spent_time(결제 시간, 비어도 됨), merchant, amount, people, excluded, source, ref, category | 지출 |
+| `expenses` | id, member_id, spent_on, merchant, amount, people, excluded, source, ref, category | 지출 |
 
 - 보드 레인은 세 테이블을 읽기만 한다.
 - `upload_cycle`, `deadline_weekday`는 쓰지 않는다 (10/3, 미제출 없음). 마감은 `end_date`다.
